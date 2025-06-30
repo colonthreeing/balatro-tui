@@ -65,8 +65,9 @@ impl ModList {
                 if !path.is_file() { continue; }
                 if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
                     if extension != "json" { continue; }
-                    if let Some(mod_obj) = Mod::from_file(&file.path()) {
+                    if let Some(mut mod_obj) = Mod::from_file(&file.path()) {
                         if mod_obj.id.is_empty() { continue; }
+                        mod_obj.enabled = Some(mod_obj.get_enabled());
                         mods.push(mod_obj);
                     }
                 }
@@ -94,6 +95,9 @@ pub struct Mod {
 
     #[serde(default)]
     pub url: Option<String>,
+    
+    #[serde(default)]
+    pub enabled: Option<bool>,
 }
 
 impl Mod {
@@ -109,6 +113,23 @@ impl Mod {
         loaded_mod.folder = path.parent()?.to_path_buf();
 
         Some(loaded_mod)
+    }
+    
+    pub fn get_enabled(&mut self) -> bool {
+        let mut enabled = true;
+        for entry in std::fs::read_dir(&self.folder).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            
+            if let Some(name) = path.file_name().and_then(|e| e.to_str()) {
+                if name == ".lovelyignore" {
+                    enabled = false;
+                    break;
+                }
+            }
+        }
+
+        enabled
     }
 
     /*
