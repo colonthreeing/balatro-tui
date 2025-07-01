@@ -1,3 +1,4 @@
+use std::fmt::Pointer;
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{prelude::*, widgets::*};
@@ -11,29 +12,38 @@ use crate::mods::{Mod, ModList};
 use crate::tui::Event;
 
 #[derive(Default)]
+enum Focused {
+    #[default]
+    Modes,
+    InstalledMods,
+}
+
+#[derive(Default)]
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
-    selector: OptionSelector,
+    installed_mod_selector: OptionSelector,
+    mode_selector: OptionSelector,
     mods: Vec<Mod>,
+    focused: Focused
 }
 
 impl Home {
     pub fn new() -> Self {
-        let mut selector = OptionSelector::default();
-        selector.title = "Installed mods".to_string();
+        let mut installed_mod_selector = OptionSelector::default();
+        installed_mod_selector.title = "Installed mods".to_string();
 
         let mut mods = ModList::new().get_local_mods();
-        
+
         mods.sort_by(|a, b| {
             match b.enabled.cmp(&a.enabled) {
                 std::cmp::Ordering::Equal => a.name.cmp(&b.name),
                 o => o,
             }
         });
-        
+
         mods.iter_mut().for_each(|m| {
-            selector.options.push(
+            installed_mod_selector.options.push(
                 vec![
                     OptionSelectorText::new(m.name.clone(), Style::default()),
                     OptionSelectorText::new(format!(" {} ", m.version.clone()), Style::default().fg(Color::LightBlue)),
@@ -42,12 +52,24 @@ impl Home {
 //                Span::styled(format!("{} {} by {:?}", m.name, m.version, m.author), Style::default().fg(Color::Green)),
             );
             if !m.enabled.unwrap_or(true) {
-                selector.options.last_mut().unwrap().push(OptionSelectorText::new(" (disabled)".to_string(), Style::default().fg(Color::Red)));
+                installed_mod_selector.options.last_mut().unwrap().push(OptionSelectorText::new(" (disabled)".to_string(), Style::default().fg(Color::Red)));
             }
         });
-        
+
+        let mut mode_selector = OptionSelector::default();
+
+        mode_selector.has_focus = true;
+        mode_selector.title = "Modes".to_string();
+
+        mode_selector.options = vec![
+            vec![OptionSelectorText::new("Installed Mods".to_string(), Style::default())],
+            vec![OptionSelectorText::new("Find New Mods".to_string(), Style::default())],
+            vec![OptionSelectorText::new("Mod Authoring Tools".to_string(), Style::default())],
+        ];
+
         Self {
-            selector,
+            installed_mod_selector,
+            mode_selector,
             mods,
             ..Default::default()
         }
@@ -72,7 +94,32 @@ impl Component for Home {
             //     ml.clone_online_mod_list();
             // }
             _ => {
-                let _ = self.selector.handle_key_event(key);
+                match self.focused {
+                    Focused::Modes => {
+                        match key.code {
+                            KeyCode::Right => {
+                                self.focused = Focused::InstalledMods;
+                                self.installed_mod_selector.has_focus = true;
+                                self.mode_selector.has_focus = false;
+                            }
+                            _ => {
+                                let _ = self.mode_selector.handle_key_event(key);
+                            }
+                        }
+                    }
+                    Focused::InstalledMods => {
+                        match key.code {
+                            KeyCode::Left => {
+                                self.focused = Focused::Modes;
+                                self.installed_mod_selector.has_focus = false;
+                                self.mode_selector.has_focus = true;
+                            }
+                            _ => {
+                                let _ = self.installed_mod_selector.handle_key_event(key);
+                            }
+                        }
+                    }
+                }
             }
         }
         Ok(None)
@@ -92,7 +139,7 @@ impl Component for Home {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-        let chunks = Layout::default()
+        let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(3),
@@ -108,10 +155,32 @@ impl Component for Home {
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
                 ),
-            chunks[0]
+            vertical_chunks[0]
         );
 
-        self.selector.draw(frame, chunks[1])?;
+
+        let horizontal_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(40),
+                Constraint::Min(50)
+            ])
+            .split(vertical_chunks[1]);
+
+        // frame.render_widget(
+        //     Paragraph::new("")
+        //         .style(Style::default())
+        //         .block(
+        //                 Block::default()
+        //                     .borders(Borders::ALL)
+        //                     .border_type(BorderType::Rounded)
+        //                     .title("Modes")
+        //         ),
+        //     horizontal_chunks[0]
+        // );
+
+        self.mode_selector.draw(frame, horizontal_chunks[0])?;
+        self.installed_mod_selector.draw(frame, horizontal_chunks[1])?;
 
         // frame.render_widget(
         //     Paragraph::new("Bottom")

@@ -11,7 +11,7 @@ use ratatui::{
     text::Span,
     widgets::Paragraph,
 };
-use ratatui::style::Color;
+use ratatui::style::{Color, Modifier};
 use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, BorderType, Borders};
 use tokio::sync::mpsc::UnboundedSender;
@@ -40,6 +40,7 @@ pub struct OptionSelector {
     pub options: Vec<Vec<OptionSelectorText>>,
     pub selected: u16,
     pub title: String,
+    pub has_focus: bool,
     offset: u16
 }
 
@@ -56,6 +57,7 @@ impl OptionSelector {
             selected: 0,
             action_tx: None,
             title: String::new(),
+            has_focus: false,
             offset: 0
         }
     }
@@ -72,13 +74,13 @@ impl Component for OptionSelector {
             KeyCode::Up => {
                 self.selected = self.selected.saturating_sub(1);
                 if self.selected < self.options.len() as u16 {
-                    self.offset = self.selected.saturating_sub(3);
+                    self.offset = self.selected.saturating_sub(5);
                 }
             },
             KeyCode::Down => {
                 self.selected = min(self.selected.saturating_add(1), (self.options.len().saturating_sub(1)) as u16);
-                if self.selected > 3 {
-                    self.offset = self.selected.saturating_sub(3);
+                if self.selected > 5 {
+                    self.offset = self.selected.saturating_sub(5);
                 }
             },
             _ => {}
@@ -113,8 +115,8 @@ impl Component for OptionSelector {
                     lines.push(Span::styled(s.text, s.style));
                 }
                 
-                if lines.len() > 1 && op_i == self.selected + 1 {
-                    lines[0] = lines[0].clone().style(Style::default().fg(Color::Green));
+                if lines.len() >= 1 && op_i == self.selected + 1 {
+                    lines[0] = lines[0].clone().style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
                 }
                 
                 Line::from(lines)
@@ -126,7 +128,7 @@ impl Component for OptionSelector {
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .title(Span::from(&self.title))
-                ,
+                    .border_style(if self.has_focus { Style::default().fg(Color::LightCyan) } else { Style::default().fg(Color::White) })
             )
             .scroll((self.offset, 0));
 
