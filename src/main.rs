@@ -30,6 +30,8 @@ async fn main() -> Result<()> {
     let args = Cli::parse();
     let mut app = App::new(args.tick_rate, args.frame_rate)?;
 
+    let config = config::Config::new()?;
+    
     app.run().await?;
 
     Ok(())

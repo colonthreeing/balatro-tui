@@ -75,6 +75,23 @@ impl Config {
 
         let mut cfg: Self = builder.build()?.try_deserialize()?;
 
+        for (mode, default_bindings) in default_config.keybindings.iter() {
+            let user_bindings = cfg.keybindings.entry(*mode).or_default();
+            for (key, cmd) in default_bindings.iter() {
+                user_bindings
+                    .entry(key.clone())
+                    .or_insert_with(|| cmd.clone());
+            }
+        }
+        
+        for (mode, default_styles) in default_config.styles.iter() {
+            let user_styles = cfg.styles.entry(*mode).or_default();
+            
+            for (style_key, style) in default_styles.iter() {
+                user_styles.entry(style_key.clone()).or_insert(*style);
+            }
+        }
+
         Ok(cfg)
     }
 }
@@ -102,7 +119,7 @@ pub fn get_config_dir() -> PathBuf {
 }
 
 fn project_directory() -> Option<ProjectDirs> {
-    ProjectDirs::from("com", "kdheepak", env!("CARGO_PKG_NAME"))
+    ProjectDirs::from("net", "sealsearch", env!("CARGO_PKG_NAME"))
 }
 
 #[derive(Clone, Debug, Default, Deref, DerefMut)]

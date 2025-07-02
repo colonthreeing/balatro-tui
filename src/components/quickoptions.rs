@@ -11,7 +11,7 @@ use balatro_tui::{launch_balatro, xdg_open};
 use crate::action::Action;
 use crate::components::Component;
 use crate::components::optionselector::{OptionSelector, OptionSelectorText};
-use crate::config::Config;
+use crate::config::{get_config_dir, get_data_dir, Config};
 use crate::tui::Event;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -49,6 +49,7 @@ impl QuickOptions {
             vec![OptionSelectorText::new("Launch Balatro".to_string(), Style::default())],
             vec![OptionSelectorText::new("Open Balatro data folder".to_string(), Style::default())],
             vec![OptionSelectorText::new("Open Balatro mods folder".to_string(), Style::default())],
+            vec![OptionSelectorText::new("Open config folder".to_string(), Style::default())],
         ]);
 
         options.title = "Quick Options".to_string();
@@ -74,6 +75,11 @@ impl QuickOptions {
                 }
                 2 => {
                     xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/Mods/").expect("Unable to use xdg-open. Make sure it's installed.");
+                }
+                3 => {
+                    xdg_open(
+                        get_config_dir().to_str().unwrap()
+                    ).expect("Unable to use xdg-open. Make sure it's installed.");
                 }
                 _ => {
                     error!("Unimplemented option selected");
