@@ -11,6 +11,8 @@ use crate::{action::Action, config::Config, tui::Event};
 pub mod fps;
 pub mod home;
 mod optionselector;
+mod authoring;
+mod quickoptions;
 
 /// `Component` is a trait that represents a visual and interactive element of the user interface.
 ///
@@ -123,4 +125,8 @@ pub trait Component {
     ///
     /// * `Result<()>` - An Ok result or an error.
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()>;
+    
+    fn focus(&mut self);
+    
+    fn unfocus(&mut self);
 }

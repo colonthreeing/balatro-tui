@@ -34,23 +34,37 @@ impl OptionSelectorText {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct OptionSelector {
+#[derive(Default)]
+pub struct OptionSelector<CB> {
     pub action_tx: Option<UnboundedSender<Action>>,
     pub options: Vec<Vec<OptionSelectorText>>,
     pub selected: u16,
     pub title: String,
     pub has_focus: bool,
-    offset: u16
+    
+    pub callback: Option<CB>,
+    offset: u16,
 }
 
-impl Default for OptionSelector {
-    fn default() -> Self {
-        Self::new(Vec::new())
+impl<CB> Clone for OptionSelector<CB>
+where CB: FnMut(u16)
+{
+    fn clone(&self) -> Self {
+        let mut s = Self::new(self.options.clone());
+        s.selected = self.selected;
+        s.title = self.title.clone();
+        s.has_focus = self.has_focus;
+        s.action_tx = self.action_tx.clone();
+        s.options = self.options.clone();
+        s.offset = self.offset;
+        
+        s
     }
 }
 
-impl OptionSelector {
+impl<CB> OptionSelector<CB>
+where CB: FnMut(u16)
+{
     pub fn new(ops: Vec<Vec<OptionSelectorText>>) -> Self {
         Self {
             options: ops,
@@ -58,17 +72,29 @@ impl OptionSelector {
             action_tx: None,
             title: String::new(),
             has_focus: false,
-            offset: 0
+            callback: None,
+            offset: 0,
+        }
+    }
+    
+    pub fn set_callback(&mut self, cb: CB) {
+        self.callback = Some(cb);
+    }
+    
+    pub fn process_callback(&mut self) {
+        if let Some(mut cb) = self.callback.take() {
+            cb(self.selected);
         }
     }
 }
 
-impl Component for OptionSelector {
+impl<CB> Component for OptionSelector<CB>
+where CB: FnMut(u16)
+{
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.action_tx = Some(tx);
         Ok(())
     }
-
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match key.code {
             KeyCode::Up => {
@@ -83,6 +109,9 @@ impl Component for OptionSelector {
                     self.offset = self.selected.saturating_sub(5);
                 }
             },
+            KeyCode::Enter => {
+                self.process_callback();
+            }
             _ => {}
         }
         Ok(None)
@@ -135,5 +164,13 @@ impl Component for OptionSelector {
         frame.render_widget(content, area);
 
         Ok(())
+    }
+
+    fn focus(&mut self) {
+        self.has_focus = true;
+    }
+
+    fn unfocus(&mut self) {
+        self.has_focus = false;
     }
 }

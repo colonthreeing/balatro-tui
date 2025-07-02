@@ -68,6 +68,9 @@ impl FpsCounter {
 }
 
 impl Component for FpsCounter {
+    fn focus(&mut self) {}
+    fn unfocus(&mut self) {}
+
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
             Action::Tick => self.app_tick()?,

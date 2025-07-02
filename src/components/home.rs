@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::fmt::Pointer;
+use std::rc::Rc;
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{prelude::*, widgets::*};
@@ -7,7 +9,9 @@ use tokio::sync::mpsc::UnboundedSender;
 use super::Component;
 use crate::{action::Action, config::Config};
 use crate::app::App;
+use crate::components::authoring::AuthoringTools;
 use crate::components::optionselector::{OptionSelector, OptionSelectorText};
+use crate::components::quickoptions::QuickOptions;
 use crate::mods::{Mod, ModList};
 use crate::tui::Event;
 
@@ -16,21 +20,25 @@ enum Focused {
     #[default]
     Modes,
     InstalledMods,
+    Authoring,
+    Quicks,
 }
 
-#[derive(Default)]
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
-    installed_mod_selector: OptionSelector,
-    mode_selector: OptionSelector,
+    quick_ops: QuickOptions,
+    installed_mod_selector: OptionSelector<Box<dyn FnMut(u16)>>,
+    mode_selector: OptionSelector<Box<dyn Fn(u16)>>,
     mods: Vec<Mod>,
-    focused: Focused
+    focused: Focused,
+    authoring: AuthoringTools,
+    has_focus: bool
 }
 
 impl Home {
     pub fn new() -> Self {
-        let mut installed_mod_selector = OptionSelector::default();
+        let mut installed_mod_selector = OptionSelector::new(vec![]);
         installed_mod_selector.title = "Installed mods".to_string();
 
         let mut mods = ModList::new().get_local_mods();
@@ -56,27 +64,42 @@ impl Home {
             }
         });
 
-        let mut mode_selector = OptionSelector::default();
-
-        mode_selector.has_focus = true;
-        mode_selector.title = "Modes".to_string();
-
-        mode_selector.options = vec![
+        let mut mode_selector = OptionSelector::new(vec![
+            vec![OptionSelectorText::new("Quick Options".to_string(), Style::default())],
             vec![OptionSelectorText::new("Installed Mods".to_string(), Style::default())],
             vec![OptionSelectorText::new("Find New Mods".to_string(), Style::default())],
             vec![OptionSelectorText::new("Mod Authoring Tools".to_string(), Style::default())],
-        ];
+        ]);
 
+        mode_selector.has_focus = true;
+        mode_selector.title = "Modes".to_string();
+        
+        let authoring = AuthoringTools::new();
+        
+        let mut quick_ops = QuickOptions::new();
+        quick_ops.setup_callback();
+        
         Self {
             installed_mod_selector,
             mode_selector,
+            authoring,
+            quick_ops,
             mods,
-            ..Default::default()
+            command_tx: None,
+            config: Config::default(),
+            focused: Focused::Modes,
+            has_focus: false,
         }
     }
 }
 
 impl Component for Home {
+    fn focus(&mut self) {
+        self.has_focus = true;
+    }
+    fn unfocus(&mut self) {
+        self.has_focus = false;
+    }
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
         Ok(())
@@ -89,17 +112,27 @@ impl Component for Home {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match key.code {
-            // KeyCode::Char('k') => {
-            //     let mut ml = ModList::new();
-            //     ml.clone_online_mod_list();
-            // }
             _ => {
                 match self.focused {
                     Focused::Modes => {
                         match key.code {
                             KeyCode::Right => {
-                                self.focused = Focused::InstalledMods;
-                                self.installed_mod_selector.has_focus = true;
+                                match self.mode_selector.selected {
+                                    0 => {
+                                        self.focused = Focused::Quicks;
+                                        self.quick_ops.focus();
+                                    }
+                                    1 => { // installed mods
+                                        self.focused = Focused::InstalledMods;
+                                        self.installed_mod_selector.focus();
+                                    }
+                                    2 => {}
+                                    3 => {
+                                        self.focused = Focused::Authoring;
+                                        self.authoring.focus();
+                                    }
+                                    _ => {}
+                                }
                                 self.mode_selector.has_focus = false;
                             }
                             _ => {
@@ -107,15 +140,39 @@ impl Component for Home {
                             }
                         }
                     }
+                    Focused::Quicks => {
+                        match key.code {
+                            KeyCode::Left => {
+                                self.focused = Focused::Modes;
+                                self.quick_ops.unfocus();
+                                self.mode_selector.focus();
+                            }
+                            _ => {
+                                let _ = self.quick_ops.handle_key_event(key);
+                            }
+                        }
+                    }
                     Focused::InstalledMods => {
                         match key.code {
                             KeyCode::Left => {
                                 self.focused = Focused::Modes;
-                                self.installed_mod_selector.has_focus = false;
-                                self.mode_selector.has_focus = true;
+                                self.installed_mod_selector.unfocus();
+                                self.mode_selector.focus();
                             }
                             _ => {
                                 let _ = self.installed_mod_selector.handle_key_event(key);
+                            }
+                        }
+                    }
+                    Focused::Authoring => {
+                        match key.code {
+                            KeyCode::Left => {
+                                self.focused = Focused::Modes;
+                                self.authoring.unfocus();
+                                self.mode_selector.focus();
+                            }
+                            _ => {
+                                let _ = self.authoring.handle_key_event(key);
                             }
                         }
                     }
@@ -166,32 +223,23 @@ impl Component for Home {
                 Constraint::Min(50)
             ])
             .split(vertical_chunks[1]);
-
-        // frame.render_widget(
-        //     Paragraph::new("")
-        //         .style(Style::default())
-        //         .block(
-        //                 Block::default()
-        //                     .borders(Borders::ALL)
-        //                     .border_type(BorderType::Rounded)
-        //                     .title("Modes")
-        //         ),
-        //     horizontal_chunks[0]
-        // );
-
         self.mode_selector.draw(frame, horizontal_chunks[0])?;
-        self.installed_mod_selector.draw(frame, horizontal_chunks[1])?;
-
-        // frame.render_widget(
-        //     Paragraph::new("Bottom")
-        //         .style(Style::default())
-        //         .block(
-        //             Block::default()
-        //                 .borders(Borders::ALL)
-        //                 .border_type(BorderType::Rounded)
-        //         ),
-        //     chunks[2]
-        // );
+        
+        match self.mode_selector.selected {
+            0 => { // quick options
+                self.quick_ops.draw(frame, horizontal_chunks[1])?;
+            }
+            1 => { // installed mods
+                self.installed_mod_selector.draw(frame, horizontal_chunks[1])?;
+            }
+            2 => { // find mods
+                
+            }
+            3 => { // mod tools
+                self.authoring.draw(frame, horizontal_chunks[1])?;
+            }
+            _ => {}
+        }
 
         Ok(())
     }
