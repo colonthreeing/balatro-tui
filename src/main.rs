@@ -21,7 +21,6 @@ mod errors;
 mod logging;
 mod tui;
 mod mods;
-mod eventers;
 
 #[tokio::main]
 async fn main() -> Result<()> {

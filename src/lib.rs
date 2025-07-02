@@ -14,3 +14,9 @@ pub fn launch_balatro(disable_console: bool) -> Result<Child, std::io::Error> {
             .spawn()
     }
 }
+
+pub fn xdg_open(path: &str) -> Result<Child, std::io::Error> {
+    Command::new("xdg-open")
+        .arg(path)
+        .spawn()
+}

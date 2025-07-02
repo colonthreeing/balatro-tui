@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::fmt::Pointer;
 use std::rc::Rc;
 use color_eyre::Result;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -112,6 +112,14 @@ impl Component for Home {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match key.code {
+            KeyCode::Char('c') => {
+                if KeyModifiers::CONTROL == key.modifiers {
+                    self.command_tx.as_ref().unwrap().send(Action::Quit)?;
+                }
+            }
+            KeyCode::Esc => {
+                self.command_tx.as_ref().unwrap().send(Action::Quit)?;
+            }
             _ => {
                 match self.focused {
                     Focused::Modes => {

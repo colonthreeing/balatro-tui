@@ -7,7 +7,7 @@ use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 use std::process::{Command, Stdio};
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::error;
-use balatro_tui::launch_balatro;
+use balatro_tui::{launch_balatro, xdg_open};
 use crate::action::Action;
 use crate::components::Component;
 use crate::components::optionselector::{OptionSelector, OptionSelectorText};
@@ -47,6 +47,8 @@ impl QuickOptions {
 
         let mut options = OptionSelector::new(vec![
             vec![OptionSelectorText::new("Launch Balatro".to_string(), Style::default())],
+            vec![OptionSelectorText::new("Open Balatro data folder".to_string(), Style::default())],
+            vec![OptionSelectorText::new("Open Balatro mods folder".to_string(), Style::default())],
         ]);
 
         options.title = "Quick Options".to_string();
@@ -61,11 +63,24 @@ impl QuickOptions {
 
     pub fn setup_callback(&mut self) {
         let launching_balatro = Rc::clone(&self.launching_balatro);
-        let launch_fn = Box::new(move |_| {
-            *launching_balatro.borrow_mut() = true;
-            launch_balatro(true).expect("Balatro failed to launch :(");
+        let on_select = Box::new(move |selection: u16| {
+            match selection {
+                0 => { // Launch balatro
+                    *launching_balatro.borrow_mut() = true;
+                    launch_balatro(true).expect("Balatro failed to launch :(");
+                }
+                1 => {
+                    xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/").expect("Unable to use xdg-open. Make sure it's installed.");
+                }
+                2 => {
+                    xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/Mods/").expect("Unable to use xdg-open. Make sure it's installed.");
+                }
+                _ => {
+                    error!("Unimplemented option selected");
+                }
+            }
         });
-        self.options.set_callback(launch_fn);
+        self.options.set_callback(on_select);
     }
 }
 
