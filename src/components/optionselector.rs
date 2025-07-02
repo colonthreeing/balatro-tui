@@ -41,7 +41,7 @@ pub struct OptionSelector<CB> {
     pub selected: u16,
     pub title: String,
     pub has_focus: bool,
-    
+
     pub callback: Option<CB>,
     offset: u16,
 }
@@ -57,7 +57,7 @@ where CB: FnMut(u16)
         s.action_tx = self.action_tx.clone();
         s.options = self.options.clone();
         s.offset = self.offset;
-        
+
         s
     }
 }
@@ -76,14 +76,14 @@ where CB: FnMut(u16)
             offset: 0,
         }
     }
-    
+
     pub fn set_callback(&mut self, cb: CB) {
         self.callback = Some(cb);
     }
-    
+
     pub fn process_callback(&mut self) {
-        if let Some(mut cb) = self.callback.take() {
-            cb(self.selected);
+        if let Some(cb) = self.callback.as_mut() {
+            (cb)(self.selected);
         }
     }
 }
@@ -139,15 +139,15 @@ where CB: FnMut(u16)
                     lines.push(Span::styled(str[0].text, str[0].style));
                 }
                 */
-                
+
                 for s in str {
                     lines.push(Span::styled(s.text, s.style));
                 }
-                
+
                 if lines.len() >= 1 && op_i == self.selected + 1 {
                     lines[0] = lines[0].clone().style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
                 }
-                
+
                 Line::from(lines)
             })
             .collect();
