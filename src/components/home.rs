@@ -11,6 +11,7 @@ use super::Component;
 use crate::{action::Action, config::Config};
 use crate::app::App;
 use crate::components::authoring::AuthoringTools;
+use crate::components::modlist::ModlistComponent;
 use crate::components::optionselector::{OptionSelector, OptionSelectorText};
 use crate::components::quickoptions::QuickOptions;
 use crate::mods::{Mod, ModList};
@@ -29,9 +30,8 @@ pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     quick_ops: QuickOptions,
-    installed_mod_selector: OptionSelector<Box<dyn FnMut(u16)>>,
+    installed_mod_selector: ModlistComponent,
     mode_selector: OptionSelector<Box<dyn Fn(u16)>>,
-    mods: Vec<Mod>,
     focused: Focused,
     authoring: AuthoringTools,
     has_focus: bool
@@ -39,31 +39,7 @@ pub struct Home {
 
 impl Home {
     pub fn new() -> Self {
-        let mut installed_mod_selector = OptionSelector::new(vec![]);
-        installed_mod_selector.title = "Installed mods".to_string();
-
-        let mut mods = ModList::new().get_local_mods();
-
-        mods.sort_by(|a, b| {
-            match b.enabled.cmp(&a.enabled) {
-                std::cmp::Ordering::Equal => a.name.cmp(&b.name),
-                o => o,
-            }
-        });
-
-        mods.iter_mut().for_each(|m| {
-            installed_mod_selector.options.push(
-                vec![
-                    OptionSelectorText::new(m.name.clone(), Style::default()),
-                    OptionSelectorText::new(format!(" {} ", m.version.clone()), Style::default().fg(Color::LightBlue)),
-                    OptionSelectorText::new(format!("by {}", m.author.clone().join(", ")), Style::default().fg(Color::DarkGray)),
-                ]
-//                Span::styled(format!("{} {} by {:?}", m.name, m.version, m.author), Style::default().fg(Color::Green)),
-            );
-            if !m.enabled.unwrap_or(true) {
-                installed_mod_selector.options.last_mut().unwrap().push(OptionSelectorText::new(" (disabled)".to_string(), Style::default().fg(Color::Red)));
-            }
-        });
+        let installed_mod_selector = ModlistComponent::new();
 
         let mut mode_selector = OptionSelector::new(vec![
             vec![OptionSelectorText::new("Quick Options".to_string(), Style::default())],
@@ -85,7 +61,6 @@ impl Home {
             mode_selector,
             authoring,
             quick_ops,
-            mods,
             command_tx: None,
             config: Config::default(),
             focused: Focused::Modes,
@@ -245,9 +220,7 @@ impl Component for Home {
             }
             _ => {}
         }
-
-        let logger =
-
+        
         frame.render_widget(
             TuiLoggerWidget::default()
                 .block(Block::default()

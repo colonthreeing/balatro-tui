@@ -133,6 +133,14 @@ impl Mod {
         enabled
     }
 
+    pub fn set_enabled(&mut self, enabled: bool) -> () {
+        if enabled {
+            std::fs::File::create(&self.folder.join(".lovelyignore")).unwrap();
+        } else {
+            std::fs::remove_file(&self.folder.join(".lovelyignore")).expect("Failed to remove .lovelyignore file");
+        }
+    }
+    
     /*
     pub fn populate(&mut self) -> () {
         for entry in std::fs::read_dir(&self.folder).unwrap() {
