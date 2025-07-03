@@ -54,7 +54,6 @@ impl Home {
         let authoring = AuthoringTools::new();
         
         let mut quick_ops = QuickOptions::new();
-        quick_ops.setup_callback();
         
         Self {
             installed_mod_selector,
@@ -79,6 +78,7 @@ impl Component for Home {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx.clone());
         self.installed_mod_selector.register_action_handler(tx.clone()).expect("Failed to register action handler for installed mod selector");
+        self.quick_ops.register_action_handler(tx.clone()).expect("Failed to register action handler for quick ops");
         Ok(())
     }
 
@@ -173,7 +173,8 @@ impl Component for Home {
             _ => {}
         }
         
-        self.installed_mod_selector.update(action)?;
+        self.installed_mod_selector.update(action.clone())?;
+        self.quick_ops.update(action.clone())?;
         
         Ok(None)
     }

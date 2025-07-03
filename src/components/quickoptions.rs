@@ -10,7 +10,7 @@ use tracing::error;
 use balatro_tui::{get_balatro_appdata_dir, get_balatro_dir, launch_balatro, open};
 use crate::action::Action;
 use crate::components::Component;
-use crate::components::optionselector::{OptionSelector, OptionSelectorText};
+use crate::components::optionselector::{Actions, OptionSelector, OptionSelectorText};
 use crate::config::{get_config_dir, get_data_dir, Config};
 use crate::tui::Event;
 use std::rc::Rc;
@@ -18,23 +18,16 @@ use std::cell::RefCell;
 use ratatui::prelude::Color;
 use ratatui::text::Line;
 use tokio::process::Child;
+use tokio::sync::mpsc;
+use crate::action;
 
 pub struct QuickOptions {
     pub options: OptionSelector,
     pub has_focus: bool,
     action_tx: Option<UnboundedSender<Action>>,
-    pub launching_balatro: Rc<RefCell<bool>>,
-}
-
-impl Clone for QuickOptions {
-    fn clone(&self) -> Self {
-        Self {
-            options: self.options.clone(),
-            has_focus: self.has_focus,
-            action_tx: self.action_tx.clone(),
-            launching_balatro: self.launching_balatro.clone(),
-        }
-    }
+    pub launching_balatro: bool,
+    local_action_tx: mpsc::UnboundedSender<Actions>,
+    local_action_rx: mpsc::UnboundedReceiver<Actions>,
 }
 
 impl QuickOptions {
@@ -54,51 +47,30 @@ impl QuickOptions {
 
         options.title = "Quick Options".to_string();
 
+        let (local_tx, local_rx) = tokio::sync::mpsc::unbounded_channel();
+
         Self {
             options,
             has_focus: false,
             action_tx: None,
-            launching_balatro: Rc::new(RefCell::new(false)),
+            launching_balatro: false,
+            local_action_tx: local_tx,
+            local_action_rx: local_rx,
         }
-    }
-
-    pub fn setup_callback(&mut self) {
-        let launching_balatro = Rc::clone(&self.launching_balatro);
-        let on_select = Box::new(move |selection: u16| {
-            match selection {
-                0 => { // Launch balatro
-                    *launching_balatro.borrow_mut() = true;
-                    match launch_balatro(true) {
-                        Ok(_) => {}
-                        Err(error) => {
-                            error!("Error launching balatro: {}", error);
-                        }
-                    }
-                }
-                1 => {
-                    let _ = open(get_balatro_dir().to_str().unwrap());
-                }
-                2 => {
-                    let _ = open(get_balatro_appdata_dir().to_str().unwrap());
-                }
-                _ => {
-                    error!("Unimplemented option selected");
-                }
-            }
-        });
     }
 }
 
 impl Component for QuickOptions {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> color_eyre::Result<()> {
         self.action_tx = Some(tx);
+        self.options.register_local_action_handler(self.local_action_tx.clone())?;
         Ok(())
     }
     fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<Option<Action>> {
         match key.code {
             _ => {
-                if *self.launching_balatro.borrow() {
-                    *self.launching_balatro.borrow_mut() = false;
+                if self.launching_balatro {
+                    self.launching_balatro = false;
                 } else {
                     self.options.handle_key_event(key)?;
                 }
@@ -107,8 +79,38 @@ impl Component for QuickOptions {
         Ok(None)
     }
 
+    fn update(&mut self, action: Action) -> color_eyre::Result<Option<Action>> {
+        match action {
+            Action::Tick => {
+                let act = self.local_action_rx.try_recv();
+                if act.is_ok() {
+                    let a = act?;
+                    match a {
+                        Actions::Selected(c) => {
+                            match c {
+                                0 => {
+                                    launch_balatro(true).expect("Balatro failed to launch!");
+                                    self.launching_balatro = true;
+                                }
+                                1 => {
+                                    open(get_balatro_dir().to_str().unwrap())
+                                }
+                                2 => {
+                                    open(get_balatro_appdata_dir().to_str().unwrap())
+                                }
+                                _ => {}
+                            }
+                        },
+                    }
+                }
+            },
+            _ => {}
+        }
+        Ok(None)
+    }
+    
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> color_eyre::Result<()> {
-        if !*self.launching_balatro.borrow() {
+        if !self.launching_balatro {
             self.options.draw(frame, area)
         } else {
             frame.render_widget(
