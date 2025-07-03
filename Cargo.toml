@@ -44,6 +44,7 @@ tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde"] }
 tui-logger = "0.17.3"
 log = "0.4.27"
+rand = "0.9.1"
 
 [build-dependencies]
 anyhow = "1.0.90"
