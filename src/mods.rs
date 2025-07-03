@@ -44,7 +44,7 @@ impl ModList {
 
     pub fn get_local_mods(&mut self) -> Vec<Mod> {
         let mod_path = get_balatro_appdata_dir().join("Mods");
-
+        
         let mut mods = vec![];
 
         for entry in std::fs::read_dir(mod_path).unwrap() {

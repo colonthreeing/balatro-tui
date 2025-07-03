@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::thread;
 use home::home_dir;
+use platform_dirs::AppDirs;
 
 pub fn launch_balatro(disable_console: bool) -> Result<Child, std::io::Error> {
     if disable_console {
@@ -41,19 +42,37 @@ pub fn xdg_open(path: &str) {
     }
 }
 
+pub fn locate_steam_appdata() -> Option<AppDirs> {
+    AppDirs::new(Some("Steam"), false)
+}
+
 pub fn get_balatro_dir() -> PathBuf {
-    let mut path = home_dir().unwrap();
+    let mut path = locate_steam_appdata().expect("failed to locate steam").data_dir;
+    
     path.extend([
-        ".local", "share", "Steam", "steamapps", "common", "Balatro"
+        "steamapps", "common", "Balatro"
     ]);
+    
     path
 }
 
 pub fn get_balatro_appdata_dir() -> PathBuf {
-    let mut path = home_dir().unwrap();
-    path.extend([
-        ".local", "share", "Steam", "steamapps", "compatdata", "2379780",
-        "pfx", "drive_c", "users", "steamuser", "AppData", "Roaming", "Balatro"
-    ]);
-    path
+    
+    #[cfg(target_os = "linux")]
+    {
+        let steam = locate_steam_appdata().expect("failed to locate steam");
+        let mut path = steam.data_dir;
+        path.extend([
+            "steamapps", "compatdata", "2379780", "pfx", "drive_c",
+            "users", "steamuser", "AppData", "Roaming", "Balatro"
+        ]);
+        
+        return path;
+    }
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    {
+        //! UNTESTED
+        let balatro = AppDirs::new(Some("Balatro"), false).expect("failed to locate balatro");
+        balatro.config_dir
+    }
 }
