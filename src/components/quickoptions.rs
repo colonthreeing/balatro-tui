@@ -7,7 +7,7 @@ use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 use std::process::{Command, Stdio};
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::error;
-use balatro_tui::{get_balatro_appdata_dir, get_balatro_dir, launch_balatro, xdg_open};
+use balatro_tui::{get_balatro_appdata_dir, get_balatro_dir, launch_balatro, open};
 use crate::action::Action;
 use crate::components::Component;
 use crate::components::optionselector::{OptionSelector, OptionSelectorText};
@@ -20,7 +20,7 @@ use ratatui::text::Line;
 use tokio::process::Child;
 
 pub struct QuickOptions {
-    pub options: OptionSelector<Box<dyn FnMut(u16)>>,
+    pub options: OptionSelector,
     pub has_focus: bool,
     action_tx: Option<UnboundedSender<Action>>,
     pub launching_balatro: Rc<RefCell<bool>>,
@@ -50,7 +50,6 @@ impl QuickOptions {
             vec![OptionSelectorText::new("Launch Balatro".to_string(), Style::default())],
             vec![OptionSelectorText::new("Open Balatro data folder".to_string(), Style::default())],
             vec![OptionSelectorText::new("Open Balatro mods folder".to_string(), Style::default())],
-            vec![OptionSelectorText::new("Open config folder".to_string(), Style::default())],
         ]);
 
         options.title = "Quick Options".to_string();
@@ -77,20 +76,16 @@ impl QuickOptions {
                     }
                 }
                 1 => {
-                    let _ = xdg_open(get_balatro_dir().to_str().unwrap());
+                    let _ = open(get_balatro_dir().to_str().unwrap());
                 }
                 2 => {
-                    let _ = xdg_open(get_balatro_appdata_dir().to_str().unwrap());
-                }
-                3 => {
-                    let _ = xdg_open(get_config_dir().to_str().unwrap());
+                    let _ = open(get_balatro_appdata_dir().to_str().unwrap());
                 }
                 _ => {
                     error!("Unimplemented option selected");
                 }
             }
         });
-        self.options.set_callback(on_select);
     }
 }
 

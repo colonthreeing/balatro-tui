@@ -31,7 +31,7 @@ pub struct Home {
     config: Config,
     quick_ops: QuickOptions,
     installed_mod_selector: ModlistComponent,
-    mode_selector: OptionSelector<Box<dyn Fn(u16)>>,
+    mode_selector: OptionSelector,
     focused: Focused,
     authoring: AuthoringTools,
     has_focus: bool
@@ -39,7 +39,7 @@ pub struct Home {
 
 impl Home {
     pub fn new() -> Self {
-        let installed_mod_selector = ModlistComponent::new();
+        let mut installed_mod_selector = ModlistComponent::new();
 
         let mut mode_selector = OptionSelector::new(vec![
             vec![OptionSelectorText::new("Quick Options".to_string(), Style::default())],
@@ -77,7 +77,8 @@ impl Component for Home {
         self.has_focus = false;
     }
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
-        self.command_tx = Some(tx);
+        self.command_tx = Some(tx.clone());
+        self.installed_mod_selector.register_action_handler(tx.clone()).expect("Failed to register action handler for installed mod selector");
         Ok(())
     }
 
@@ -171,6 +172,9 @@ impl Component for Home {
             }
             _ => {}
         }
+        
+        self.installed_mod_selector.update(action)?;
+        
         Ok(None)
     }
 

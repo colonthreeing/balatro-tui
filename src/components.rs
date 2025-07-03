@@ -7,6 +7,7 @@ use ratatui::{
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{action::Action, config::Config, tui::Event};
+use crate::components::optionselector::Actions;
 
 pub mod fps;
 pub mod home;
@@ -31,6 +32,10 @@ pub trait Component {
     /// * `Result<()>` - An Ok result or an error.
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         let _ = tx; // to appease clippy
+        Ok(())
+    }
+    fn register_local_action_handler(&mut self, tx: UnboundedSender<Actions>) -> Result<()> {
+        let _ = tx;
         Ok(())
     }
     /// Register a configuration handler that provides configuration settings if necessary.

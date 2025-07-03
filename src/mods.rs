@@ -133,11 +133,14 @@ impl Mod {
         enabled
     }
 
-    pub fn set_enabled(&mut self, enabled: bool) -> () {
+    pub fn toggle_enabled(&mut self) -> () {
+        let enabled = self.get_enabled();
         if enabled {
             std::fs::File::create(&self.folder.join(".lovelyignore")).unwrap();
+            self.enabled = Some(false);
         } else {
             std::fs::remove_file(&self.folder.join(".lovelyignore")).expect("Failed to remove .lovelyignore file");
+            self.enabled = Some(true);
         }
     }
     

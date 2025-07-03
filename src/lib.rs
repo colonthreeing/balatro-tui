@@ -24,21 +24,24 @@ pub fn launch_balatro(disable_console: bool) -> Result<Child, std::io::Error> {
     }
 }
 
-pub fn xdg_open(path: &str) {
-    let mut child = Command::new("xdg-open")
-        .arg(path)
-        .stderr(Stdio::piped())
-        .spawn().expect("failed to execute process xdg-open");
-    
-    if let Some(stderr) = child.stderr.take() {
-        let reader = BufReader::new(stderr);
-        thread::spawn(move || {
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    error!("xdg-open error: {}", line);
-                }
-            }
-        });
+pub fn open(path: &str) {
+    // let mut child = Command::new("xdg-open")
+    //     .arg(path)
+    //     .stderr(Stdio::piped())
+    //     .spawn().expect("failed to execute process xdg-open");
+    //
+    // if let Some(stderr) = child.stderr.take() {
+    //     let reader = BufReader::new(stderr);
+    //     thread::spawn(move || {
+    //         for line in reader.lines() {
+    //             if let Ok(line) = line {
+    //                 error!("xdg-open error: {}", line);
+    //             }
+    //         }
+    //     });
+    // }
+    if let Err(e) = opener::open(path) {
+        error!("failed to open: {}", e);
     }
 }
 
