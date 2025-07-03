@@ -1,4 +1,4 @@
-use std::io::BufReader;
+use std::io::{BufReader, Error};
 use crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::Frame;
 use ratatui::layout::{Rect, Size};
@@ -17,6 +17,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use ratatui::prelude::Color;
 use ratatui::text::Line;
+use tokio::process::Child;
 
 pub struct QuickOptions {
     pub options: OptionSelector<Box<dyn FnMut(u16)>>,
@@ -68,18 +69,38 @@ impl QuickOptions {
             match selection {
                 0 => { // Launch balatro
                     *launching_balatro.borrow_mut() = true;
-                    launch_balatro(true).expect("Balatro failed to launch :(");
+                    match launch_balatro(true) {
+                        Ok(_) => {}
+                        Err(error) => {
+                            error!("Error launching balatro: {}", error);
+                        }
+                    }
                 }
                 1 => {
-                    xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/").expect("Unable to use xdg-open. Make sure it's installed.");
+                    match xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/") {
+                        Ok(_) => {}
+                        Err(error) => {
+                            error!("Error opening Balatro data folder: {}", error);
+                        }
+                    }
                 }
                 2 => {
-                    xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/Mods/").expect("Unable to use xdg-open. Make sure it's installed.");
+                    match xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/Mods/") {
+                        Ok(_) => {}
+                        Err(error) => {
+                            error!("Error opening Balatro mods folder: {}", error);
+                        }
+                    }
                 }
                 3 => {
-                    xdg_open(
+                    match xdg_open(
                         get_config_dir().to_str().unwrap()
-                    ).expect("Unable to use xdg-open. Make sure it's installed.");
+                    ) {
+                        Ok(_) => {}
+                        Err(error) => {
+                            error!("Error opening config folder: {}", error);
+                        }
+                    }
                 }
                 _ => {
                     error!("Unimplemented option selected");

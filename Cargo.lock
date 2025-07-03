@@ -177,6 +177,7 @@ dependencies = [
  "json5",
  "lazy_static",
  "libc",
+ "log",
  "pretty_assertions",
  "ratatui",
  "serde",

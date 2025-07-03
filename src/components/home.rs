@@ -5,7 +5,8 @@ use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
-
+use log::{info, warn};
+use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 use super::Component;
 use crate::{action::Action, config::Config};
 use crate::app::App;
@@ -112,13 +113,8 @@ impl Component for Home {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match key.code {
-            KeyCode::Char('c') => {
-                if KeyModifiers::CONTROL == key.modifiers {
-                    self.command_tx.as_ref().unwrap().send(Action::Quit)?;
-                }
-            }
-            KeyCode::Esc => {
-                self.command_tx.as_ref().unwrap().send(Action::Quit)?;
+            KeyCode::Char('e') => {
+                info!("Hello!");
             }
             _ => {
                 match self.focused {
@@ -209,6 +205,7 @@ impl Component for Home {
             .constraints([
                 Constraint::Length(3),
                 Constraint::Min(5),
+                Constraint::Length(3),
             ])
             .split(area);
 
@@ -248,6 +245,27 @@ impl Component for Home {
             }
             _ => {}
         }
+        
+        let logger = 
+        
+        frame.render_widget(
+            TuiLoggerWidget::default()
+                .block(Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title("Logs")
+                )
+                .output_level(None)
+                .style_info(Style::default().fg(Color::LightGreen))
+                .style_warn(Style::default().fg(Color::Yellow))
+                .style_error(Style::default().fg(Color::Red))
+                .style_debug(Style::default().fg(Color::Blue))
+                .output_file(false)
+                .output_target(false)
+                .output_timestamp(None)
+                .output_line(false),
+            vertical_chunks[2]
+        );
 
         Ok(())
     }

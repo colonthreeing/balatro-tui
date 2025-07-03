@@ -1,3 +1,5 @@
+pub mod motd;
+
 use tokio::process::{Child, Command};
 
 pub fn launch_balatro(disable_console: bool) -> Result<Child, std::io::Error> {

@@ -1,16 +1,10 @@
-use std::fs::DirEntry;
-use std::{fs, io};
 use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::{Command};
-use std::process::Stdio;
-use std::path::Path;
 use clap::Parser;
 use cli::Cli;
 use color_eyre::Result;
-use tracing::{error, info};
+use log::info;
 use crate::app::App;
-use crate::config::get_data_dir;
-use crate::mods::{ModList};
+use balatro_tui::motd::motd;
 
 mod action;
 mod app;
@@ -25,12 +19,18 @@ mod mods;
 #[tokio::main]
 async fn main() -> Result<()> {
     crate::errors::init()?;
-    crate::logging::init()?;
 
     let args = Cli::parse();
     let mut app = App::new(args.tick_rate, args.frame_rate)?;
 
+    // Set max_log_level to Info
+    tui_logger::init_logger(log::LevelFilter::Trace)?;
+    
+    // Set default level for unknown targets to Info
+    tui_logger::set_default_level(log::LevelFilter::Info);
     let config = config::Config::new()?;
+
+    info!("{}", motd());
     
     app.run().await?;
 
