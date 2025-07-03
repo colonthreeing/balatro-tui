@@ -7,7 +7,7 @@ use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 use std::process::{Command, Stdio};
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::error;
-use balatro_tui::{launch_balatro, xdg_open};
+use balatro_tui::{get_balatro_appdata_dir, get_balatro_dir, launch_balatro, xdg_open};
 use crate::action::Action;
 use crate::components::Component;
 use crate::components::optionselector::{OptionSelector, OptionSelectorText};
@@ -77,30 +77,13 @@ impl QuickOptions {
                     }
                 }
                 1 => {
-                    match xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/") {
-                        Ok(_) => {}
-                        Err(error) => {
-                            error!("Error opening Balatro data folder: {}", error);
-                        }
-                    }
+                    let _ = xdg_open(get_balatro_dir().to_str().unwrap());
                 }
                 2 => {
-                    match xdg_open("/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/Mods/") {
-                        Ok(_) => {}
-                        Err(error) => {
-                            error!("Error opening Balatro mods folder: {}", error);
-                        }
-                    }
+                    let _ = xdg_open(get_balatro_appdata_dir().to_str().unwrap());
                 }
                 3 => {
-                    match xdg_open(
-                        get_config_dir().to_str().unwrap()
-                    ) {
-                        Ok(_) => {}
-                        Err(error) => {
-                            error!("Error opening config folder: {}", error);
-                        }
-                    }
+                    let _ = xdg_open(get_config_dir().to_str().unwrap());
                 }
                 _ => {
                     error!("Unimplemented option selected");

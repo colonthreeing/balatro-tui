@@ -173,6 +173,7 @@ dependencies = [
  "directories",
  "futures",
  "git2",
+ "home",
  "human-panic",
  "json5",
  "lazy_static",

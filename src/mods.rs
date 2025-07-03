@@ -5,6 +5,7 @@ use git2::Repository;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
+use balatro_tui::get_balatro_appdata_dir;
 use crate::config::get_data_dir;
 
 #[derive(Default)]
@@ -42,7 +43,7 @@ impl ModList {
     }
 
     pub fn get_local_mods(&mut self) -> Vec<Mod> {
-        let mod_path = "/home/julie/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/Mods/";
+        let mod_path = get_balatro_appdata_dir().join("Mods");
 
         let mut mods = vec![];
 

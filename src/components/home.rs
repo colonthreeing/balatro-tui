@@ -245,9 +245,9 @@ impl Component for Home {
             }
             _ => {}
         }
-        
-        let logger = 
-        
+
+        let logger =
+
         frame.render_widget(
             TuiLoggerWidget::default()
                 .block(Block::default()

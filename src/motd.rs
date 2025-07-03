@@ -8,7 +8,7 @@ pub fn motd() -> String {
         "Surely you'll pull a baron this time.",
         "Also try the SealSeal mod!",
         "You are valid!",
-        "Don't buff ceremonial dagger.",
+        "Nerf Ceremonial Dagger.",
         "Praise Zech!",
         "Only cool people can see this message :3",
         ":3",
