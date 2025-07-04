@@ -34,10 +34,6 @@ pub trait Component {
         let _ = tx; // to appease clippy
         Ok(())
     }
-    fn register_local_action_handler(&mut self, tx: UnboundedSender<Actions>) -> Result<()> {
-        let _ = tx;
-        Ok(())
-    }
     /// Register a configuration handler that provides configuration settings if necessary.
     ///
     /// # Arguments
@@ -135,4 +131,11 @@ pub trait Component {
     fn focus(&mut self);
     
     fn unfocus(&mut self);
+}
+
+pub trait Eventable<EventType> {
+    fn register_local_action_handler(&mut self, tx: UnboundedSender<Actions>) -> Result<()> {
+        let _ = tx;
+        Ok(())
+    }
 }

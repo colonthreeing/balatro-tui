@@ -15,7 +15,7 @@ use ratatui::style::{Color, Modifier};
 use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, BorderType, Borders};
 use tokio::sync::mpsc::UnboundedSender;
-use super::Component;
+use super::{Component, Eventable};
 
 use crate::action::Action;
 
@@ -82,10 +82,6 @@ impl OptionSelector
 impl Component for OptionSelector {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.app_action_tx = Some(tx);
-        Ok(())
-    }
-    fn register_local_action_handler(&mut self, tx: UnboundedSender<Actions>) -> Result<()> {
-        self.action_tx = Some(tx);
         Ok(())
     }
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
@@ -165,5 +161,12 @@ impl Component for OptionSelector {
 
     fn unfocus(&mut self) {
         self.has_focus = false;
+    }
+}
+
+impl Eventable<Actions> for OptionSelector {
+    fn register_local_action_handler(&mut self, tx: UnboundedSender<Actions>) -> Result<()> {
+        self.action_tx = Some(tx);
+        Ok(())
     }
 }

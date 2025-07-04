@@ -9,7 +9,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::error;
 use balatro_tui::{get_balatro_appdata_dir, get_balatro_dir, launch_balatro, open};
 use crate::action::Action;
-use crate::components::Component;
+use crate::components::{Component, Eventable};
 use crate::components::optionselector::{Actions, OptionSelector, OptionSelectorText};
 use crate::config::{get_config_dir, get_data_dir, Config};
 use crate::tui::Event;
@@ -62,7 +62,8 @@ impl QuickOptions {
 
 impl Component for QuickOptions {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> color_eyre::Result<()> {
-        self.action_tx = Some(tx);
+        self.action_tx = Some(tx.clone());
+        self.options.register_action_handler(tx.clone())?;
         self.options.register_local_action_handler(self.local_action_tx.clone())?;
         Ok(())
     }

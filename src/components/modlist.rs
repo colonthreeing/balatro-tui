@@ -20,7 +20,7 @@ use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, BorderType, Borders};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use super::Component;
+use super::{Component, Eventable};
 
 use crate::action::Action;
 use crate::components::optionselector::{Actions, OptionSelector, OptionSelectorText};
@@ -83,6 +83,7 @@ impl ModlistComponent {
 impl Component for ModlistComponent {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.action_tx = Some(tx.clone());
+        self.options.register_action_handler(tx.clone())?;
         self.options.register_local_action_handler(self.local_action_tx.clone())?;
         Ok(())
     }
