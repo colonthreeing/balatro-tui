@@ -46,35 +46,43 @@ impl ModList {
         let mod_path = get_balatro_appdata_dir().join("Mods");
         
         let mut mods = vec![];
+        if let Some(dir) = std::fs::read_dir(mod_path.clone()).ok() {
+            for entry in dir {
+                let entry = entry.unwrap();
+                let path = entry.path();
 
-        for entry in std::fs::read_dir(mod_path).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
+                if !path.is_dir() { continue; }
 
-            if !path.is_dir() { continue; }
+                let mut found_mod_meta = false;
 
-            // let mut mod_obj = Mod::new();
-            //
-            // // mod_obj.name = path.file_name().unwrap().to_str().unwrap().to_string();
-            // mod_obj.folder = path;
-            //
-            // mods.push(mod_obj);
-
-            for file in std::fs::read_dir(&path).unwrap() {
-                let file = file.unwrap();
-                let path = file.path();
-                if !path.is_file() { continue; }
-                if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
-                    if extension != "json" { continue; }
-                    if let Some(mut mod_obj) = Mod::from_file(&file.path()) {
-                        if mod_obj.id.is_empty() { continue; }
-                        mod_obj.enabled = Some(mod_obj.get_enabled());
-                        mods.push(mod_obj);
+                for file in std::fs::read_dir(&path).unwrap() {
+                    let file = file.unwrap();
+                    let path = file.path();
+                    if !path.is_file() { continue; }
+                    if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
+                        if extension != "json" { continue; }
+                        if let Some(mut mod_obj) = Mod::from_file(&file.path()) {
+                            if mod_obj.id.is_empty() { continue; }
+                            mod_obj.enabled = Some(mod_obj.get_enabled());
+                            mods.push(mod_obj);
+                            found_mod_meta = true;
+                        }
                     }
+                }
+
+                if !found_mod_meta {
+                    let name = path.file_name().unwrap().to_str().unwrap().to_string();
+                    if name.to_lowercase().starts_with("lovely") || name.to_lowercase().starts_with("steamodded") { continue; }
+                    let mut mod_obj = Mod::new();
+                    mod_obj.folder = path.clone();
+                    mod_obj.enabled = Some(mod_obj.get_enabled());
+                    mod_obj.author = vec!["unknown".to_string()];
+                    mod_obj.name = name;
+                    mod_obj.version = "(unknown)".to_string();
+                    mods.push(mod_obj);
                 }
             }
         }
-
         mods
     }
 }
