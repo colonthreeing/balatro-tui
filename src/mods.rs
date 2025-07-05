@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use git2::Repository;
+use log::error;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
@@ -57,15 +58,38 @@ impl ModList {
 
                 for file in std::fs::read_dir(&path).unwrap() {
                     let file = file.unwrap();
-                    let path = file.path();
-                    if !path.is_file() { continue; }
-                    if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
+                    let filepath = file.path();
+                    if !filepath.is_file() { continue; }
+                    if let Some(extension) = filepath.extension().and_then(|e| e.to_str()) {
                         if extension != "json" { continue; }
                         if let Some(mut mod_obj) = Mod::from_file(&file.path()) {
-                            if mod_obj.id.is_empty() { continue; }
-                            mod_obj.enabled = Some(mod_obj.get_enabled());
-                            mods.push(mod_obj);
-                            found_mod_meta = true;
+                            if mod_obj.id.is_empty() {
+                                if mod_obj.name == "Steamodded" {
+                                    // HACK as Steamodded does not currently have a full
+                                    // mod metadata json.
+                                    mod_obj.id = "steamodded".to_string();
+                                    mod_obj.version = "1.0.0".to_string();
+                                    mod_obj.enabled = Some(mod_obj.get_enabled());
+                                    mod_obj.force_enable = true;
+                                    mod_obj.author = vec!["the Steamodded contributors".to_string()];
+
+                                    // get version from version.lua
+                                    // version.lua format is literally just
+                                    // return "1.0.0~BETA-0614a-STEAMODDED"
+
+                                    let f = File::open(path.join("version.lua")).unwrap();
+                                    let reader = BufReader::new(f);
+                                    // This feels bad to be doing *but* it works.
+                                    mod_obj.version = reader.lines().nth(0).unwrap().unwrap().split("\"").nth(1).unwrap().to_string();
+
+                                    mods.push(mod_obj);
+                                    found_mod_meta = true;
+                                }
+                            } else {
+                                mod_obj.enabled = Some(mod_obj.get_enabled());
+                                mods.push(mod_obj);
+                                found_mod_meta = true;
+                            }
                         }
                     }
                 }
@@ -107,6 +131,8 @@ pub struct Mod {
     
     #[serde(default)]
     pub enabled: Option<bool>,
+
+    pub force_enable: bool,
 }
 
 impl Mod {
@@ -123,7 +149,38 @@ impl Mod {
 
         Some(loaded_mod)
     }
-    
+
+    pub fn from_directory(path: &Path) -> Option<Self> {
+        let mut found_mod = Mod::new();
+
+        for file in std::fs::read_dir(&path).unwrap() {
+            let file = file.unwrap();
+            let filepath = file.path();
+            if !filepath.is_file() { continue; }
+            if let Some(extension) = filepath.extension().and_then(|e| e.to_str()) {
+                if extension != "json" { continue; }
+                if let Some(mut mod_obj) = Mod::from_file(&file.path()) {
+                    if mod_obj.id.is_empty() { continue; }
+                    mod_obj.enabled = Some(mod_obj.get_enabled());
+                    found_mod = mod_obj;
+                }
+            }
+        }
+
+        Some(Self {
+            name: found_mod.name,
+            id: found_mod.id,
+            folder: found_mod.folder,
+            description: found_mod.description,
+            version: found_mod.version,
+            author: found_mod.author,
+            dependencies: found_mod.dependencies,
+            url: found_mod.url,
+            enabled: found_mod.enabled,
+            force_enable: found_mod.force_enable,
+        })
+    }
+
     pub fn get_enabled(&mut self) -> bool {
         let mut enabled = true;
         for entry in std::fs::read_dir(&self.folder).unwrap() {
@@ -142,6 +199,10 @@ impl Mod {
     }
 
     pub fn toggle_enabled(&mut self) -> () {
+        if self.force_enable {
+            error!("This mod is marked as force enabled!");
+            return;
+        }
         let enabled = self.get_enabled();
         if enabled {
             std::fs::File::create(&self.folder.join(".lovelyignore")).unwrap();

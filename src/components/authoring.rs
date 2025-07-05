@@ -1,5 +1,6 @@
 use std::cmp::min;
 use std::ops::Add;
+use std::path::PathBuf;
 use std::time::Instant;
 
 use color_eyre::Result;
@@ -19,16 +20,27 @@ use tokio::sync::mpsc::UnboundedSender;
 use super::Component;
 
 use crate::action::Action;
+use crate::mods::Mod;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct AuthoringTools {
     pub action_tx: Option<UnboundedSender<Action>>,
     pub has_focus: bool,
+    pub mod_path: PathBuf,
+    edited_mod: Mod
 }
 
 impl AuthoringTools {
     pub fn new() -> Self {
-        Self::default()
+        // let path = std::env::current_dir().unwrap();
+        // let path = String::from("/home/julie/Documents/GitHub/SnipersTVCorpMod");
+        let path = PathBuf::from("/home/julie/Documents/GitHub/SnipersTVCorpMod");
+        let edited_mod = Mod::from_directory(path.as_path()).unwrap();
+        Self {
+            mod_path: path,
+            edited_mod,
+            ..Default::default()
+        }
     }
 }
 
@@ -65,7 +77,13 @@ impl Component for AuthoringTools {
             ])
             .split(area);
         frame.render_widget(
-            Paragraph::new("Currently editing mod \'{}\'")
+//            Paragraph::new(format!("Currently editing mod \'{}\' by {}", self.edited_mod.name, self.edited_mod.author.join(", ")))
+            Paragraph::new(Line::from(vec![
+                Span::from("Currently editing mod "),
+                Span::styled(self.edited_mod.name.clone(), Style::default().fg(Color::Yellow)),
+                Span::from(" by "),
+                Span::styled(self.edited_mod.author.join(", "), Style::default().fg(Color::Yellow)),
+            ]))
                 .style(Style::default())
                 .block(
                     Block::default()
@@ -78,7 +96,7 @@ impl Component for AuthoringTools {
                                 Style::default().fg(Color::White)
                             }
                         )
-                        .title("{}")
+                        .title(format!("Editing mod at {}", self.mod_path.display()))
                 ),
             chunks[0]
         );
