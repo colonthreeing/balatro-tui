@@ -15,8 +15,9 @@ use crate::components::authoring::AuthoringTools;
 use crate::components::modlist::ModlistComponent;
 use crate::components::optionselector::{OptionSelector, OptionSelectorText};
 use crate::components::quickoptions::QuickOptions;
+use crate::components::remotemods::RemoteModsComponent;
 use crate::config::get_data_dir;
-use crate::mods::{Mod, ModList};
+use crate::mods::{Mod, ModList, RemoteMod};
 use crate::tui::Event;
 
 #[derive(Default)]
@@ -24,6 +25,7 @@ enum Focused {
     #[default]
     Modes,
     InstalledMods,
+    RemoteMods,
     Authoring,
     Quicks,
 }
@@ -44,6 +46,7 @@ pub struct Home {
     config: Config,
     quick_ops: QuickOptions,
     installed_mod_selector: ModlistComponent,
+    remote_mod_selector: RemoteModsComponent,
     mode_selector: OptionSelector,
     focused: Focused,
     authoring: AuthoringTools,
@@ -67,10 +70,13 @@ impl Home {
         
         let authoring = AuthoringTools::new();
         
-        let mut quick_ops = QuickOptions::new();
-        
+        let quick_ops = QuickOptions::new();
+
+        let remote_mod_selector = RemoteModsComponent::new();
+
         Self {
             installed_mod_selector,
+            remote_mod_selector,
             mode_selector,
             authoring,
             quick_ops,
@@ -121,7 +127,10 @@ impl Component for Home {
                                         self.focused = Focused::InstalledMods;
                                         self.installed_mod_selector.focus();
                                     }
-                                    2 => {}
+                                    2 => {
+                                        self.focused = Focused::RemoteMods;
+                                        self.remote_mod_selector.focus();
+                                    }
                                     3 => {
                                         self.focused = Focused::Authoring;
                                         self.authoring.focus();
@@ -156,6 +165,18 @@ impl Component for Home {
                             }
                             _ => {
                                 let _ = self.installed_mod_selector.handle_key_event(key);
+                            }
+                        }
+                    }
+                    Focused::RemoteMods => {
+                        match key.code {
+                            KeyCode::Left => {
+                                self.focused = Focused::Modes;
+                                self.remote_mod_selector.unfocus();
+                                self.mode_selector.focus();
+                            }
+                            _ => {
+                                let _ = self.remote_mod_selector.handle_key_event(key);
                             }
                         }
                     }
@@ -197,10 +218,12 @@ impl Component for Home {
                         if let Some(repo) = get_repo_at(&get_data_dir().join("mods")) {
                             update_repo(&repo).expect("Failed to update repository.");
                         }
+                        self.remote_mod_selector.setup_mods();
                         self.state = DrawingState::Main;
                     }
                     DrawingState::DownloadingModlist => {
                         clone_online_mod_list(get_data_dir().join("mods")).expect("Failed to download mod list.");
+                        self.remote_mod_selector.setup_mods();
                         self.state = DrawingState::Main;
                     }
                     _ => {}
@@ -295,7 +318,7 @@ impl Component for Home {
                         self.installed_mod_selector.draw(frame, horizontal_chunks[1])?;
                     }
                     2 => { // find mods
-
+                        self.remote_mod_selector.draw(frame, horizontal_chunks[1])?;
                     }
                     3 => { // mod tools
                         self.authoring.draw(frame, horizontal_chunks[1])?;

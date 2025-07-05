@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use git2::Repository;
-use log::error;
+use log::{error, info};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
@@ -19,16 +19,7 @@ impl ModList {
         Self::default()
     }
 
-    pub fn open_mod_list(&mut self) {
-        let repo = match Repository::open(get_data_dir().display().to_string() + "/mods/") {
-            Ok(repo) => {
-                self.repo = Option::from(repo);
-            },
-            Err(e) => panic!("failed to open: {}", e),
-        };
-    }
-
-    pub fn get_local_mods(&mut self) -> Vec<Mod> {
+    pub fn get_local_mods() -> Vec<Mod> {
         let mod_path = get_balatro_appdata_dir().join("Mods");
         
         let mut mods = vec![];
@@ -92,6 +83,29 @@ impl ModList {
                 }
             }
         }
+        mods
+    }
+
+    pub fn get_remote_mods() -> Vec<RemoteMod> {
+        let mut mods = vec![];
+
+        let mut mods_dir = get_data_dir();
+        mods_dir.extend(
+            ["mods", "mods"] // mods folder inside the repository
+        );
+
+        if let Some(dir) = std::fs::read_dir(mods_dir.clone()).ok() {
+            for entry in dir {
+                let entry = entry.unwrap();
+                let path = entry.path();
+
+                if !path.is_dir() { continue; }
+                if let Some(mod_obj) = RemoteMod::from_directory(&path) {
+                    mods.push(mod_obj);
+                }
+            }
+        }
+
         mods
     }
 }
@@ -193,29 +207,58 @@ impl Mod {
             self.enabled = Some(true);
         }
     }
-    
-    /*
-    pub fn populate(&mut self) -> () {
-        for entry in std::fs::read_dir(&self.folder).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
+}
 
-            if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
-                let file = File::open(&path).unwrap();
-                let reader = BufReader::new(file);
+#[derive(Deserialize, Default, Debug)]
+#[serde(default)]
+pub struct RemoteMod {
+    pub title: String,
+    pub version: String,
+    pub author: String,
+    pub categories: Vec<String>,
+    pub repo: String,
+    pub folder_name: String,
+    pub identifier: String,
+}
 
-                if extension == "json" {
-                    let json: Value = serde_json::from_reader(reader).unwrap();
+impl RemoteMod {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn from_json(json: &Value) -> Option<Self> {
+        let result = serde_json::from_value(json.clone());
+        if let Err(e) = &result {
+            println!("Error parsing JSON: {}", e);
+        }
+        Some(result.ok()?)
+    }
 
-                    // println!("{:?}", json);
+    pub fn from_directory(path: &Path) -> Option<Self> {
+        let mut found_mod = RemoteMod::new();
 
-                    if let Some(id) = json.get("id") {
-                        self.id = id.as_str().unwrap().parse().unwrap();
-                        println!("id: {}", self.id);
-                    }
+        for file in std::fs::read_dir(&path).unwrap() {
+            let file = file.unwrap();
+            let filepath = file.path();
+            if !filepath.is_file() { continue; }
+            if let Some(filename) = filepath.file_name().and_then(|e| e.to_str()) {
+                if filename == "meta.json" {
+                    let reader = BufReader::new(File::open(&filepath).unwrap());
+                    let json: Value = serde_json::from_reader(reader).ok()?;
+                    found_mod = RemoteMod::from_json(&json)?;
                 }
             }
         }
+
+        found_mod.identifier = path.file_name()?.to_str()?.to_string();
+
+        Some(Self {
+            title: found_mod.title,
+            version: found_mod.version,
+            author: found_mod.author,
+            categories: found_mod.categories,
+            repo: found_mod.repo,
+            folder_name: found_mod.folder_name,
+            identifier: found_mod.identifier,
+        })
     }
-    */
 }

@@ -99,7 +99,9 @@ impl Component for OptionSelector {
                 }
             },
             KeyCode::Enter => {
-                self.action_tx.as_ref().unwrap().send(Actions::Selected(self.selected))?;
+                if let Some(tx) = self.action_tx.as_ref() {
+                    tx.send(Actions::Selected(self.selected))?;
+                }
             }
             _ => {}
         }

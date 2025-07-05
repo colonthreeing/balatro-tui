@@ -15,6 +15,7 @@ mod optionselector;
 mod authoring;
 mod quickoptions;
 mod modlist;
+mod remotemods;
 
 /// `Component` is a trait that represents a visual and interactive element of the user interface.
 ///

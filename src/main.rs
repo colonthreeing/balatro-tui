@@ -7,6 +7,7 @@ use balatro_tui::{clone_online_mod_list, get_repo_at, update_repo};
 use crate::app::App;
 use balatro_tui::motd::motd;
 use crate::config::get_data_dir;
+use crate::mods::ModList;
 
 mod action;
 mod app;
@@ -35,6 +36,6 @@ async fn main() -> Result<()> {
     info!("{}", motd());
 
     app.run().await?;
-
+    
     Ok(())
 }
