@@ -7,6 +7,7 @@ use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 use log::{info, warn};
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
+use balatro_tui::{clone_online_mod_list, get_repo_at, update_repo};
 use super::Component;
 use crate::{action::Action, config::Config};
 use crate::app::App;
@@ -14,6 +15,7 @@ use crate::components::authoring::AuthoringTools;
 use crate::components::modlist::ModlistComponent;
 use crate::components::optionselector::{OptionSelector, OptionSelectorText};
 use crate::components::quickoptions::QuickOptions;
+use crate::config::get_data_dir;
 use crate::mods::{Mod, ModList};
 use crate::tui::Event;
 
@@ -26,6 +28,17 @@ enum Focused {
     Quicks,
 }
 
+#[derive(Default)]
+enum DrawingState {
+    #[default]
+    None,
+    Loading,
+    DownloadingModlist,
+    UpdatingModlist,
+    DownloadingMods,
+    Main,
+}
+
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
@@ -34,7 +47,8 @@ pub struct Home {
     mode_selector: OptionSelector,
     focused: Focused,
     authoring: AuthoringTools,
-    has_focus: bool
+    has_focus: bool,
+    state: DrawingState,
 }
 
 impl Home {
@@ -64,6 +78,7 @@ impl Home {
             config: Config::default(),
             focused: Focused::Modes,
             has_focus: false,
+            state: DrawingState::None,
         }
     }
 }
@@ -165,7 +180,31 @@ impl Component for Home {
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
             Action::Tick => {
-                // add any logic here that should run on every tick
+                match self.state {
+                    DrawingState::None => {
+                        self.state = DrawingState::Loading;
+                    }
+                    DrawingState::Loading => {
+                        if let Some(repo) = get_repo_at(&get_data_dir().join("mods")) {
+                            // println!("Balatro-tui is updating the mod list, please wait...");
+                            self.state = DrawingState::UpdatingModlist;
+                        } else {
+                            // println!("Balatro-tui is downloading the mod list, please wait...");
+                            self.state = DrawingState::DownloadingModlist;
+                        }
+                    }
+                    DrawingState::UpdatingModlist => {
+                        if let Some(repo) = get_repo_at(&get_data_dir().join("mods")) {
+                            update_repo(&repo).expect("Failed to update repository.");
+                        }
+                        self.state = DrawingState::Main;
+                    }
+                    DrawingState::DownloadingModlist => {
+                        clone_online_mod_list(get_data_dir().join("mods")).expect("Failed to download mod list.");
+                        self.state = DrawingState::Main;
+                    }
+                    _ => {}
+                }
             }
             Action::Render => {
                 // add any logic here that should run on every render
@@ -180,70 +219,111 @@ impl Component for Home {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(3),
-                Constraint::Min(5),
-                Constraint::Length(3),
-            ])
-            .split(area);
+        match self.state {
+            DrawingState::None => {
+                // self.state = DrawingState::Main;
+            }
+            DrawingState::Loading => {
+                frame.render_widget(
+                    Paragraph::new(Line::from("Now loading...").centered())
+                        .style(Style::default())
+                        .block(
+                            Block::bordered()
+                                .border_type(BorderType::Rounded)
+                        ),
+                    area
+                )
+            }
+            DrawingState::DownloadingModlist => {
+                frame.render_widget(
+                    Paragraph::new(Line::from("Downloading mod list...").centered())
+                        .style(Style::default())
+                        .block(
+                            Block::bordered()
+                                .border_type(BorderType::Rounded)
+                        ),
+                    area
+                )
+            }
+            DrawingState::UpdatingModlist => {
+                frame.render_widget(
+                    Paragraph::new(Line::from("Updating mod list...").centered())
+                        .style(Style::default())
+                        .block(
+                            Block::bordered()
+                                .border_type(BorderType::Rounded)
+                        ),
+                    area
+                )
+            }
+            DrawingState::Main => {
+                let vertical_chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Length(3),
+                        Constraint::Min(5),
+                        Constraint::Length(3),
+                    ])
+                    .split(area);
 
-        frame.render_widget(
-            Paragraph::new("Balatro TUI")
-                .style(Style::default())
-                .block(
-                        Block::default()
+                frame.render_widget(
+                    Paragraph::new("Balatro TUI")
+                        .style(Style::default())
+                        .block(
+                            Block::default()
+                                .borders(Borders::ALL)
+                                .border_type(BorderType::Rounded)
+                        ),
+                    vertical_chunks[0]
+                );
+
+
+                let horizontal_chunks = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([
+                        Constraint::Length(40),
+                        Constraint::Min(50)
+                    ])
+                    .split(vertical_chunks[1]);
+                self.mode_selector.draw(frame, horizontal_chunks[0])?;
+
+                match self.mode_selector.selected {
+                    0 => { // quick options
+                        self.quick_ops.draw(frame, horizontal_chunks[1])?;
+                    }
+                    1 => { // installed mods
+                        self.installed_mod_selector.draw(frame, horizontal_chunks[1])?;
+                    }
+                    2 => { // find mods
+
+                    }
+                    3 => { // mod tools
+                        self.authoring.draw(frame, horizontal_chunks[1])?;
+                    }
+                    _ => {}
+                }
+
+                frame.render_widget(
+                    TuiLoggerWidget::default()
+                        .block(Block::default()
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
-                ),
-            vertical_chunks[0]
-        );
-
-
-        let horizontal_chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Length(40),
-                Constraint::Min(50)
-            ])
-            .split(vertical_chunks[1]);
-        self.mode_selector.draw(frame, horizontal_chunks[0])?;
-        
-        match self.mode_selector.selected {
-            0 => { // quick options
-                self.quick_ops.draw(frame, horizontal_chunks[1])?;
-            }
-            1 => { // installed mods
-                self.installed_mod_selector.draw(frame, horizontal_chunks[1])?;
-            }
-            2 => { // find mods
-                
-            }
-            3 => { // mod tools
-                self.authoring.draw(frame, horizontal_chunks[1])?;
+                            .title("Logs")
+                        )
+                        .output_level(None)
+                        .style_info(Style::default().fg(Color::LightGreen))
+                        .style_warn(Style::default().fg(Color::Yellow))
+                        .style_error(Style::default().fg(Color::Red))
+                        .style_debug(Style::default().fg(Color::Blue))
+                        .output_file(false)
+                        .output_target(false)
+                        .output_timestamp(None)
+                        .output_line(false),
+                    vertical_chunks[2]
+                );
             }
             _ => {}
         }
-        
-        frame.render_widget(
-            TuiLoggerWidget::default()
-                .block(Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title("Logs")
-                )
-                .output_level(None)
-                .style_info(Style::default().fg(Color::LightGreen))
-                .style_warn(Style::default().fg(Color::Yellow))
-                .style_error(Style::default().fg(Color::Red))
-                .style_debug(Style::default().fg(Color::Blue))
-                .output_file(false)
-                .output_target(false)
-                .output_timestamp(None)
-                .output_line(false),
-            vertical_chunks[2]
-        );
 
         Ok(())
     }

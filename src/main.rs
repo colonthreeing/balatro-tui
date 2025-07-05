@@ -34,14 +34,6 @@ async fn main() -> Result<()> {
 
     info!("{}", motd());
 
-    if let Some(repo) = get_repo_at(&get_data_dir().join("mods")) {
-        println!("Balatro-tui is updating the mod list, please wait...");
-        update_repo(&repo).expect("Failed to update repository.");
-    } else {
-        println!("Balatro-tui is downloading the mod list, please wait...");
-        clone_online_mod_list(get_data_dir().join("mods")).expect("Failed to download mod list.");
-    }
-
     app.run().await?;
 
     Ok(())
