@@ -32,9 +32,8 @@ pub struct AuthoringTools {
 
 impl AuthoringTools {
     pub fn new() -> Self {
-        // let path = std::env::current_dir().unwrap();
-        // let path = String::from("/home/julie/Documents/GitHub/SnipersTVCorpMod");
-        let path = PathBuf::from("/home/julie/Documents/GitHub/SnipersTVCorpMod");
+        let path = std::env::current_dir().unwrap();
+        // let path = PathBuf::from("/home/julie/Documents/GitHub/SnipersTVCorpMod");
         let edited_mod = Mod::from_directory(path.as_path()).unwrap();
         Self {
             mod_path: path,
@@ -76,30 +75,55 @@ impl Component for AuthoringTools {
                 Constraint::Min(5),
             ])
             .split(area);
-        frame.render_widget(
-//            Paragraph::new(format!("Currently editing mod \'{}\' by {}", self.edited_mod.name, self.edited_mod.author.join(", ")))
-            Paragraph::new(Line::from(vec![
-                Span::from("Currently editing mod "),
-                Span::styled(self.edited_mod.name.clone(), Style::default().fg(Color::Yellow)),
-                Span::from(" by "),
-                Span::styled(self.edited_mod.author.join(", "), Style::default().fg(Color::Yellow)),
-            ]))
-                .style(Style::default())
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                        .border_style(
-                            if self.has_focus {
-                                Style::default().fg(Color::LightCyan)
-                            } else {
-                                Style::default().fg(Color::White)
-                            }
-                        )
-                        .title(format!("Editing mod at {}", self.mod_path.display()))
-                ),
+        
+        if self.edited_mod.id.is_empty() {
+            frame.render_widget(
+                Paragraph::new(Line::from(vec![
+                    Span::from("No mod was found at "),
+                    Span::styled(format!("{}", self.mod_path.display()), Style::default().fg(Color::Yellow)),
+                    Span::from(", sorry! Make sure there is a metadata JSON file in the root of the mod directory."),
+                ]))
+                    .style(Style::default())
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .border_style(
+                                if self.has_focus {
+                                    Style::default().fg(Color::LightCyan)
+                                } else {
+                                    Style::default().fg(Color::White)
+                                }
+                            )
+                    ),
             chunks[0]
-        );
+            );
+        } else {
+            frame.render_widget(
+                //            Paragraph::new(format!("Currently editing mod \'{}\' by {}", self.edited_mod.name, self.edited_mod.author.join(", ")))
+                Paragraph::new(Line::from(vec![
+                    Span::from("Currently editing mod "),
+                    Span::styled(self.edited_mod.name.clone(), Style::default().fg(Color::Yellow)),
+                    Span::from(" by "),
+                    Span::styled(self.edited_mod.author.join(", "), Style::default().fg(Color::Yellow)),
+                ]))
+                    .style(Style::default())
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .border_style(
+                                if self.has_focus {
+                                    Style::default().fg(Color::LightCyan)
+                                } else {
+                                    Style::default().fg(Color::White)
+                                }
+                            )
+                            .title(format!("Editing mod at {}", self.mod_path.display()))
+                    ),
+                chunks[0]
+            );
+        }
 
         Ok(())
     }
