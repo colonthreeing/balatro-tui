@@ -6,6 +6,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::thread;
+use git2::{FetchOptions, RemoteCallbacks, Repository};
 use home::home_dir;
 use platform_dirs::AppDirs;
 
@@ -78,4 +79,27 @@ pub fn get_balatro_appdata_dir() -> PathBuf {
         let balatro = AppDirs::new(Some("Balatro"), false).expect("failed to locate balatro");
         balatro.config_dir
     }
+}
+
+pub fn clone_online_mod_list(to: PathBuf) -> Result<Repository, git2::Error> {
+    let url = "https://github.com/skyline69/balatro-mod-index.git";
+    let repo = Repository::clone(url, to);
+    
+    repo
+}
+
+pub fn get_repo_at(path: &PathBuf) -> Option<Repository> {
+    let repo = Repository::open(path);
+    
+    repo.ok()
+}
+
+pub fn update_repo(repo: &Repository) -> Result<(), git2::Error> {
+    let mut remote = repo.find_remote("origin")?;
+    
+    let mut fetch_options = FetchOptions::new();
+    
+    remote.fetch(&["refs/heads/*:refs/remotes/origin/*"], Some(&mut fetch_options), None)?;
+    
+    Ok(())
 }

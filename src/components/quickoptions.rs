@@ -41,6 +41,7 @@ impl QuickOptions {
 
         let mut options = OptionSelector::new(vec![
             vec![OptionSelectorText::new("Launch Balatro".to_string(), Style::default())],
+            vec![OptionSelectorText::new("Launch Balatro With Console".to_string(), Style::default())],
             vec![OptionSelectorText::new("Open Balatro data folder".to_string(), Style::default())],
             vec![OptionSelectorText::new("Open Balatro mods folder".to_string(), Style::default())],
         ]);
@@ -94,9 +95,13 @@ impl Component for QuickOptions {
                                     self.launching_balatro = true;
                                 }
                                 1 => {
-                                    open(get_balatro_dir().to_str().unwrap())
+                                    launch_balatro(false).expect("Balatro failed to launch!");
+                                    self.launching_balatro = true;
                                 }
                                 2 => {
+                                    open(get_balatro_dir().to_str().unwrap())
+                                }
+                                3 => {
                                     open(get_balatro_appdata_dir().to_str().unwrap())
                                 }
                                 _ => {}

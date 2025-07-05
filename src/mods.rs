@@ -20,26 +20,11 @@ impl ModList {
     }
 
     pub fn open_mod_list(&mut self) {
-        if self.repo.is_none() {
-            self.clone_online_mod_list();
-        } else {
-            let repo = match Repository::open(get_data_dir().display().to_string() + "/mods/") {
-                Ok(repo) => {
-                    self.repo = Option::from(repo);
-                },
-                Err(e) => panic!("failed to open: {}", e),
-            };
-        }
-    }
-
-    pub fn clone_online_mod_list(&mut self) {
-        let url = "https://github.com/skyline69/balatro-mod-index.git";
-        let repo = match Repository::clone(url, get_data_dir().display().to_string() + "/mods/")
-        {
+        let repo = match Repository::open(get_data_dir().display().to_string() + "/mods/") {
             Ok(repo) => {
                 self.repo = Option::from(repo);
             },
-            Err(e) => panic!("failed to clone: {}", e),
+            Err(e) => panic!("failed to open: {}", e),
         };
     }
 
@@ -125,9 +110,6 @@ pub struct Mod {
     pub author: Vec<String>,
 
     pub dependencies: Vec<String>,
-
-    #[serde(default)]
-    pub url: Option<String>,
     
     #[serde(default)]
     pub enabled: Option<bool>,
@@ -175,7 +157,6 @@ impl Mod {
             version: found_mod.version,
             author: found_mod.author,
             dependencies: found_mod.dependencies,
-            url: found_mod.url,
             enabled: found_mod.enabled,
             force_enable: found_mod.force_enable,
         })
