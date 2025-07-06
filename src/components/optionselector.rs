@@ -46,7 +46,7 @@ pub struct OptionSelector {
     pub title: String,
     pub has_focus: bool,
     pub action_tx: Option<UnboundedSender<Actions>>,
-    offset: usize,
+    pub scroll_offset: usize,
 }
 
 impl Clone for OptionSelector
@@ -58,7 +58,7 @@ impl Clone for OptionSelector
         s.has_focus = self.has_focus;
         s.app_action_tx = self.app_action_tx.clone();
         s.options = self.options.clone();
-        s.offset = self.offset;
+        s.scroll_offset = self.scroll_offset;
 
         s
     }
@@ -74,7 +74,7 @@ impl OptionSelector
             title: String::new(),
             has_focus: false,
             action_tx: None,
-            offset: 0,
+            scroll_offset: 0,
         }
     }
 }
@@ -89,13 +89,13 @@ impl Component for OptionSelector {
             KeyCode::Up => {
                 self.selected = self.selected.saturating_sub(1);
                 if self.selected < self.options.len() {
-                    self.offset = self.selected.saturating_sub(5);
+                    self.scroll_offset = self.selected.saturating_sub(5);
                 }
             },
             KeyCode::Down => {
                 self.selected = min(self.selected.saturating_add(1), (self.options.len().saturating_sub(1)));
                 if self.selected > 5 {
-                    self.offset = self.selected.saturating_sub(5);
+                    self.scroll_offset = self.selected.saturating_sub(5);
                 }
             },
             KeyCode::Enter => {
@@ -150,7 +150,7 @@ impl Component for OptionSelector {
                     .title(Span::from(&self.title))
                     .border_style(if self.has_focus { Style::default().fg(Color::LightCyan) } else { Style::default().fg(Color::White) })
             )
-            .scroll((self.offset as u16, 0));
+            .scroll((self.scroll_offset as u16, 0));
 
         frame.render_widget(content, area);
 

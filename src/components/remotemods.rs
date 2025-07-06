@@ -116,6 +116,8 @@ impl Component for RemoteModsComponent {
             KeyCode::Char(c) => {
                 self.searchbar.handle_key_event(key)?;
                 self.search(self.searchbar.text.clone());
+                self.options.selected = 0;
+                self.options.scroll_offset = 0;
             }
             KeyCode::Backspace => {
                 self.searchbar.handle_key_event(key)?;
