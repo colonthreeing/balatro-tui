@@ -48,6 +48,7 @@ rand = "0.9.1"
 home = "0.5.11"
 platform-dirs = "0.3.0"
 opener = "0.8.2"
+rust-fuzzy-search = "0.1.1"
 
 [build-dependencies]
 anyhow = "1.0.90"

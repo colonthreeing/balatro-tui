@@ -24,6 +24,7 @@ use super::{Component, Eventable};
 
 use crate::action::Action;
 use crate::components::optionselector::{Actions, OptionSelector, OptionSelectorText};
+use crate::mods;
 use crate::mods::{Mod, ModList};
 
 pub struct ModlistComponent {

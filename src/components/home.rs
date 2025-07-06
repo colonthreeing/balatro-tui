@@ -110,9 +110,6 @@ impl Component for Home {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match key.code {
-            KeyCode::Char('e') => {
-                info!("Hello!");
-            }
             _ => {
                 match self.focused {
                     Focused::Modes => {

@@ -211,6 +211,7 @@ impl Mod {
 
 #[derive(Deserialize, Default, Debug)]
 #[serde(default)]
+#[derive(Clone)]
 pub struct RemoteMod {
     pub title: String,
     pub version: String,
