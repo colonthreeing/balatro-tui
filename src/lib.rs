@@ -1,14 +1,19 @@
 pub mod motd;
 
+use std::error::Error;
+use std::fs::File;
 use std::process::Stdio;
 use log::error;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command};
-use std::thread;
+use std::{fs, thread};
 use git2::{FetchOptions, RemoteCallbacks, Repository};
 use home::home_dir;
 use platform_dirs::AppDirs;
+use std::io::{Write, Read, Seek, SeekFrom};
+use reqwest::get;
+use tempfile::NamedTempFile;
 
 pub fn launch_balatro(disable_console: bool) -> Result<Child, std::io::Error> {
     if disable_console {
@@ -102,4 +107,46 @@ pub fn update_repo(repo: &Repository) -> Result<(), git2::Error> {
     remote.fetch(&["refs/heads/*:refs/remotes/origin/*"], Some(&mut fetch_options), None)?;
     
     Ok(())
+}
+
+pub async fn download_to_tmp(url: &str) -> NamedTempFile {
+    let mut tmpfile: NamedTempFile = NamedTempFile::new().unwrap();
+
+    let response = get(url).await.unwrap();
+
+    if response.status().is_success() {
+        let content = response.bytes().await.unwrap();
+
+        tmpfile.write_all(&content).unwrap();
+    } else {
+        panic!("Failed to download file: {:?}", response.status());
+    }
+
+    tmpfile
+}
+
+pub fn unzip(file: &File, base_path: &PathBuf, dir_name: &str) {
+    let mut archive = zip::ZipArchive::new(file).unwrap();
+
+    let target_path = base_path.join(dir_name);
+    fs::create_dir_all(&target_path).unwrap();
+
+    archive.extract(&target_path).unwrap();
+
+    let mut entries = fs::read_dir(&target_path).unwrap()
+        .filter_map(|e| e.ok())
+        .collect::<Vec<_>>();
+    
+    if entries.len() == 1 && entries[0].path().is_dir() {
+        let dir = entries.pop().unwrap().path();
+
+        for entry in fs::read_dir(&dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            let to = target_path.join(entry.file_name());
+            fs::rename(&path, &to).expect("failed to rename");
+        }
+        
+        fs::remove_dir(dir).expect("failed to remove dir");
+    }
 }

@@ -1,5 +1,6 @@
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
+use log::info;
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -37,6 +38,8 @@ impl RemoteModsComponent {
 
         let (modlist_tx, modlist_rx) = tokio::sync::mpsc::unbounded_channel();
 
+        installed_mod_selector.register_local_action_handler(modlist_tx.clone()).expect("Failed to register event handler!");
+        
         let mut searchbar = TextInput::new();
         
         searchbar.placeholder = "Search...".to_string();
@@ -137,7 +140,9 @@ impl Component for RemoteModsComponent {
                 if act.is_ok() {
                     let a = act?;
                     match a {
-                        Actions::Selected(c) => {},
+                        Actions::Selected(c) => {
+                            info!("Selected {}", self.displayed_mods[c].identifier.clone());
+                        },
                     }
                 }
             },

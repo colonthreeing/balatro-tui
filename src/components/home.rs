@@ -234,6 +234,7 @@ impl Component for Home {
         
         self.installed_mod_selector.update(action.clone())?;
         self.quick_ops.update(action.clone())?;
+        self.remote_mod_selector.update(action.clone())?;
         
         Ok(None)
     }
