@@ -218,6 +218,8 @@ pub struct RemoteMod {
     pub author: String,
     pub categories: Vec<String>,
     pub repo: String,
+    #[serde(rename = "downloadURL")]
+    pub download_url: String,
     pub folder_name: String,
     pub identifier: String,
 }
@@ -258,6 +260,7 @@ impl RemoteMod {
             author: found_mod.author,
             categories: found_mod.categories,
             repo: found_mod.repo,
+            download_url: found_mod.download_url,
             folder_name: found_mod.folder_name,
             identifier: found_mod.identifier,
         })

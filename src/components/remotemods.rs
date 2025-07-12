@@ -11,12 +11,20 @@ use ratatui::style::{Color, Modifier};
 use rust_fuzzy_search::fuzzy_search_threshold;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
+use balatro_tui::{download_to_tmp, get_balatro_appdata_dir, unzip};
 use super::{Component, Eventable};
 
 use crate::action::Action;
 use crate::components::optionselector::{Actions, OptionSelector, OptionSelectorText};
 use crate::components::textinput::TextInput;
 use crate::mods::{Mod, ModList, RemoteMod};
+
+#[derive(Default)]
+enum State {
+    #[default]
+    Normal,
+    Downloading(RemoteMod),
+}
 
 pub struct RemoteModsComponent {
     pub action_tx: Option<UnboundedSender<Action>>,
@@ -27,6 +35,7 @@ pub struct RemoteModsComponent {
     displayed_mods: Vec<RemoteMod>,
     local_action_tx: mpsc::UnboundedSender<Actions>,
     local_action_rx: mpsc::UnboundedReceiver<Actions>,
+    state: State
 }
 
 impl RemoteModsComponent {
@@ -54,6 +63,7 @@ impl RemoteModsComponent {
             displayed_mods: mods_ref.clone(),
             local_action_rx: modlist_rx,
             local_action_tx: modlist_tx,
+            state: State::Normal,
         };
 
         this
@@ -126,6 +136,10 @@ impl Component for RemoteModsComponent {
                 self.searchbar.handle_key_event(key)?;
                 self.search(self.searchbar.text.clone());
             }
+            KeyCode::Enter => {
+                let selected_mod = self.displayed_mods[self.options.selected].clone();
+                self.state = State::Downloading(selected_mod);
+            }
             _ => {
                 self.options.handle_key_event(key)?;
             }
@@ -136,13 +150,32 @@ impl Component for RemoteModsComponent {
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
             Action::Tick => {
-                let act = self.local_action_rx.try_recv();
-                if act.is_ok() {
-                    let a = act?;
-                    match a {
-                        Actions::Selected(c) => {
-                            info!("Selected {}", self.displayed_mods[c].identifier.clone());
-                        },
+                match &self.state {
+                    State::Normal => {
+                        let act = self.local_action_rx.try_recv();
+                        if act.is_ok() {
+                            let a = act?;
+                            match a {
+                                Actions::Selected(c) => {
+                                    info!("Selected {}", self.displayed_mods[c].identifier.clone());
+                                },
+                            }
+                        }
+                    }
+                    State::Downloading(remote_mod) => {
+                        let remote_mod = remote_mod.clone();
+                        tokio::spawn(async move {
+                            info!("Now installing {} from {}", remote_mod.title, remote_mod.download_url);
+
+                            let temp_file = download_to_tmp(&*remote_mod.download_url).await;
+                            let file = temp_file.as_file();
+
+                            unzip(file, &get_balatro_appdata_dir().join("Mods"), &remote_mod.folder_name);
+
+                            info!("Successfully installed {} {}", remote_mod.title, remote_mod.version);
+                        });
+
+                        self.state = State::Normal;
                     }
                 }
             },
