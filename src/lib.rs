@@ -3,7 +3,7 @@ pub mod motd;
 use std::error::Error;
 use std::fs::File;
 use std::process::Stdio;
-use log::error;
+use log::{error, warn};
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command};
@@ -129,8 +129,13 @@ pub fn unzip(file: &File, base_path: &PathBuf, dir_name: &str) {
     let mut archive = zip::ZipArchive::new(file).unwrap();
 
     let target_path = base_path.join(dir_name);
+    
+    if target_path.exists() {
+        fs::remove_dir_all(&target_path).unwrap();
+    }
+    
     fs::create_dir_all(&target_path).unwrap();
-
+    
     archive.extract(&target_path).unwrap();
 
     let mut entries = fs::read_dir(&target_path).unwrap()

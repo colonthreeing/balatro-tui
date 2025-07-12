@@ -44,6 +44,7 @@ impl QuickOptions {
             vec![OptionSelectorText::new("Launch Balatro With Console".to_string(), Style::default())],
             vec![OptionSelectorText::new("Open Balatro data folder".to_string(), Style::default())],
             vec![OptionSelectorText::new("Open Balatro mods folder".to_string(), Style::default())],
+            vec![OptionSelectorText::new("Open Balatro-tui data folder".to_string(), Style::default())],
         ]);
 
         options.title = "Quick Options".to_string();
@@ -103,6 +104,9 @@ impl Component for QuickOptions {
                                 }
                                 3 => {
                                     open(get_balatro_appdata_dir().to_str().unwrap())
+                                }
+                                4 => {
+                                    open(get_data_dir().to_str().unwrap())
                                 }
                                 _ => {}
                             }

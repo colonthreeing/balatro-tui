@@ -220,6 +220,7 @@ pub struct RemoteMod {
     pub repo: String,
     #[serde(rename = "downloadURL")]
     pub download_url: String,
+    #[serde(rename = "folderName")]
     pub folder_name: String,
     pub identifier: String,
 }
