@@ -22,7 +22,7 @@ Uses the [Balatro Mod Index](https://github.com/skyline69/balatro-mod-index) rep
 
 The traditional Balatro Mod Manager does not have good Linux support. This vexes me as a Linux user.
 So I decided to make my own mod manager from scratch rather than patching BMM to work
-(even though that's also something I did, although they haven't accepted any of my pull requests yet).
+(even though that's also something I did, although they haven't accepted my pull request yet).
 Anyway, TL;DR, much better linux support.
 
 As for why it's a terminal application, I spend a lot of time doing `./run_balatro.sh` in the terminal when I am
