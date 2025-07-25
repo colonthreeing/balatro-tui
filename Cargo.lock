@@ -205,13 +205,13 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
+ "nucleo-matcher",
  "opener",
  "platform-dirs",
  "pretty_assertions",
  "rand",
  "ratatui",
  "reqwest",
- "rust-fuzzy-search",
  "serde",
  "serde_json",
  "signal-hook",
@@ -2736,6 +2736,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nucleo-matcher"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf33f538733d1a5a3494b836ba913207f14d9d4a1d3cd67030c5061bdd2cac85"
+dependencies = [
+ "memchr",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3290,12 +3300,6 @@ dependencies = [
  "serde",
  "serde_derive",
 ]
-
-[[package]]
-name = "rust-fuzzy-search"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a157657054ffe556d8858504af8a672a054a6e0bd9e8ee531059100c0fa11bb2"
 
 [[package]]
 name = "rust-ini"

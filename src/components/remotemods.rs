@@ -1,14 +1,15 @@
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use log::info;
+use nucleo_matcher::{Config, Matcher};
+use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
-    style::{Style, Stylize},
+    style::{Style},
 };
-use ratatui::layout::{Direction, Size};
-use ratatui::style::{Color, Modifier};
-use rust_fuzzy_search::fuzzy_search_threshold;
+use ratatui::layout::{Direction};
+use ratatui::style::{Color};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use balatro_tui::{download_to_tmp, get_balatro_appdata_dir, unzip};
@@ -17,7 +18,7 @@ use super::{Component, Eventable};
 use crate::action::Action;
 use crate::components::optionselector::{Actions, OptionSelector, OptionSelectorText};
 use crate::components::textinput::TextInput;
-use crate::mods::{Mod, ModList, RemoteMod};
+use crate::mods::{ModList, RemoteMod};
 
 #[derive(Default)]
 enum State {
@@ -96,11 +97,15 @@ impl RemoteModsComponent {
         let names: Vec<String> = self.mods.iter().map(|m| m.title.clone().to_lowercase()).collect();
         let all_mods: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
 
+        let mut matcher = Matcher::new(Config::DEFAULT.match_paths());
+
         let threshold = 0.4f32;
         if query.is_empty() {
             self.displayed_mods = self.mods.clone();
         } else {
-            let res: Vec<(&str, f32)> = fuzzy_search_threshold(&*query, &all_mods, threshold);
+            // let res: Vec<(&str, f32)> = fuzzy_search_threshold(&*query, &all_mods, threshold);
+
+            let res = Pattern::parse(&*query, CaseMatching::Ignore, Normalization::Smart).match_list(names, &mut matcher);
 
             let mut filtered_mods: Vec<RemoteMod> = Vec::new();
             for (m, _) in res {
