@@ -9,7 +9,6 @@ use tokio::sync::mpsc::UnboundedSender;
 use crate::{action::Action, config::Config, tui::Event};
 use crate::components::optionselector::Actions;
 
-pub mod fps;
 pub mod home;
 mod optionselector;
 mod authoring;
