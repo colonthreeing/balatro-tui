@@ -3,7 +3,7 @@ pub mod motd;
 use git2::build::CheckoutBuilder;
 use git2::{FetchOptions, RemoteCallbacks, Repository};
 use home::home_dir;
-use log::{error, warn};
+use log::{error, info, warn};
 use platform_dirs::AppDirs;
 use reqwest::get;
 use std::error::Error;
@@ -177,5 +177,51 @@ pub fn unzip(file: &File, base_path: &PathBuf, dir_name: &str) {
         }
 
         fs::remove_dir(dir).expect("failed to remove dir");
+    }
+}
+
+pub async fn install_lovely() {
+    info!("Downloading Lovely...");
+
+    // download windows verison
+    // because linux uses proton,
+    // it will also use the windows dll.
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        let file = download_to_tmp("https://github.com/ethangreen-dev/lovely-injector/releases/latest/download/lovely-x86_64-pc-windows-msvc.zip").await;
+
+        let target_path = get_balatro_dir().join("version.dll");
+
+        if target_path.exists() {
+            fs::remove_file(&target_path).expect("failed to remove existing version.dll");
+        }
+
+        let mut archive = zip::ZipArchive::new(file.as_file()).expect("failed to open zip archive");
+
+        // archive only has one file, version.dll
+
+        let mut file = archive
+            .by_name("version.dll")
+            .expect("failed to find version.dll in zip archive");
+
+        let mut target_file = File::create(&target_path).expect("failed to create version.dll");
+        std::io::copy(&mut file, &mut target_file)
+            .expect("failed to copy version.dll to target path");
+    }
+    // macos version
+    #[cfg(target_os = "macos")]
+    {
+        unimplemented!()
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    {
+        info!("Successfully Installed Lovely!")
+    }
+    #[cfg(target_os = "linux")]
+    {
+        info!(
+            "Successfully Installed Lovely! You may need to set the launch options in Steam to \"WINEDLLOVERRIDES=\"version=n,b\" %command%\""
+        );
     }
 }

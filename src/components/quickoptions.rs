@@ -1,25 +1,25 @@
-use std::io::{BufReader, Error};
+use crate::action;
+use crate::action::Action;
+use crate::components::optionselector::{Actions, OptionSelector, OptionSelectorText};
+use crate::components::{Component, Eventable};
+use crate::config::{Config, get_config_dir, get_data_dir};
+use crate::tui::Event;
+use balatro_tui::{get_balatro_appdata_dir, get_balatro_dir, install_lovely, launch_balatro, open};
 use crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 use ratatui::Frame;
 use ratatui::layout::{Rect, Size};
-use ratatui::style::{Modifier, Style};
-use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
-use std::process::{Command, Stdio};
-use tokio::sync::mpsc::UnboundedSender;
-use tracing::error;
-use balatro_tui::{get_balatro_appdata_dir, get_balatro_dir, launch_balatro, open};
-use crate::action::Action;
-use crate::components::{Component, Eventable};
-use crate::components::optionselector::{Actions, OptionSelector, OptionSelectorText};
-use crate::config::{get_config_dir, get_data_dir, Config};
-use crate::tui::Event;
-use std::rc::Rc;
-use std::cell::RefCell;
 use ratatui::prelude::Color;
+use ratatui::style::{Modifier, Style};
 use ratatui::text::Line;
+use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
+use std::cell::RefCell;
+use std::io::{BufReader, Error};
+use std::process::{Command, Stdio};
+use std::rc::Rc;
 use tokio::process::Child;
 use tokio::sync::mpsc;
-use crate::action;
+use tokio::sync::mpsc::UnboundedSender;
+use tracing::error;
 
 pub struct QuickOptions {
     pub options: OptionSelector,
@@ -40,11 +40,30 @@ impl QuickOptions {
         // };
 
         let mut options = OptionSelector::new(vec![
-            vec![OptionSelectorText::new("Launch Balatro".to_string(), Style::default())],
-            vec![OptionSelectorText::new("Launch Balatro With Console".to_string(), Style::default())],
-            vec![OptionSelectorText::new("Open Balatro data folder".to_string(), Style::default())],
-            vec![OptionSelectorText::new("Open Balatro mods folder".to_string(), Style::default())],
-            vec![OptionSelectorText::new("Open Balatro-tui data folder".to_string(), Style::default())],
+            vec![OptionSelectorText::new(
+                "Launch Balatro".to_string(),
+                Style::default(),
+            )],
+            vec![OptionSelectorText::new(
+                "Launch Balatro With Console".to_string(),
+                Style::default(),
+            )],
+            vec![OptionSelectorText::new(
+                "Open Balatro data folder".to_string(),
+                Style::default(),
+            )],
+            vec![OptionSelectorText::new(
+                "Open Balatro mods folder".to_string(),
+                Style::default(),
+            )],
+            vec![OptionSelectorText::new(
+                "Open Balatro-tui data folder".to_string(),
+                Style::default(),
+            )],
+            vec![OptionSelectorText::new(
+                "Install/Update Lovely".to_string(),
+                Style::default(),
+            )],
         ]);
 
         options.title = "Quick Options".to_string();
@@ -66,7 +85,8 @@ impl Component for QuickOptions {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> color_eyre::Result<()> {
         self.action_tx = Some(tx.clone());
         self.options.register_action_handler(tx.clone())?;
-        self.options.register_local_action_handler(self.local_action_tx.clone())?;
+        self.options
+            .register_local_action_handler(self.local_action_tx.clone())?;
         Ok(())
     }
     fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<Option<Action>> {
@@ -89,54 +109,57 @@ impl Component for QuickOptions {
                 if act.is_ok() {
                     let a = act?;
                     match a {
-                        Actions::Selected(c) => {
-                            match c {
-                                0 => {
-                                    launch_balatro(true).expect("Balatro failed to launch!");
-                                    self.launching_balatro = true;
-                                }
-                                1 => {
-                                    launch_balatro(false).expect("Balatro failed to launch!");
-                                    self.launching_balatro = true;
-                                }
-                                2 => {
-                                    open(get_balatro_dir().to_str().unwrap())
-                                }
-                                3 => {
-                                    open(get_balatro_appdata_dir().to_str().unwrap())
-                                }
-                                4 => {
-                                    open(get_data_dir().to_str().unwrap())
-                                }
-                                _ => {}
+                        Actions::Selected(c) => match c {
+                            0 => {
+                                launch_balatro(true).expect("Balatro failed to launch!");
+                                self.launching_balatro = true;
                             }
+                            1 => {
+                                launch_balatro(false).expect("Balatro failed to launch!");
+                                self.launching_balatro = true;
+                            }
+                            2 => open(get_balatro_dir().to_str().unwrap()),
+                            3 => open(get_balatro_appdata_dir().to_str().unwrap()),
+                            4 => open(get_data_dir().to_str().unwrap()),
+                            5 => {
+                                tokio::spawn(async move {
+                                    install_lovely().await;
+                                });
+                            }
+                            _ => {}
                         },
                     }
                 }
-            },
+            }
             _ => {}
         }
         Ok(None)
     }
-    
+
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> color_eyre::Result<()> {
         if !self.launching_balatro {
             self.options.draw(frame, area)
         } else {
             frame.render_widget(
-                Paragraph::new(
-                    vec![
-                        Line::from("Launching Balatro, please wait...").style(Style::default()).centered(),
-                        Line::from("   (Press any key to continue)").style(Style::default().fg(Color::Gray)).centered(),
-                    ]
-                )
+                Paragraph::new(vec![
+                    Line::from("Launching Balatro, please wait...")
+                        .style(Style::default())
+                        .centered(),
+                    Line::from("   (Press any key to continue)")
+                        .style(Style::default().fg(Color::Gray))
+                        .centered(),
+                ])
                 .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .border_type(BorderType::Rounded)
-                            .border_style(if self.has_focus { Style::default().fg(Color::LightCyan) } else { Style::default().fg(Color::White) })
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(if self.has_focus {
+                            Style::default().fg(Color::LightCyan)
+                        } else {
+                            Style::default().fg(Color::White)
+                        }),
                 ),
-                area
+                area,
             );
 
             Ok(())

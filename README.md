@@ -12,11 +12,15 @@ Uses the [Balatro Mod Index](https://github.com/skyline69/balatro-mod-index) rep
 - Viewing mod list
 - Launching the game
 - Installing mods from the Balatro Mod Index
+- Installing and updating Lovely
 
 ### Planned (in order of when they will probably be added)
-- Updating mods and Steamodded (+ lovely?)
+- Updating mods
 - Helper scripts for making mods
 - Windows support (already implemented but untested and uncompiled)
+
+### If people actually want it
+- MacOS support (already somewhat implemented but I am even less confident in it's current state than Windows support.)
 
 ### Why?
 
